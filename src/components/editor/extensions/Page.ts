@@ -4,7 +4,7 @@ import { PageNodeView } from './PageNodeView'         // <--- Importante
 
 export const Page = Node.create({
   name: 'page',
-  content: '(panel|paragraph|character|dialogue|sfx)+',
+  content: '(storyPageHeader?|panel|paragraph|character|dialogue|sfx)+',
 
   parseHTML() {
     return [{ tag: 'div[data-type="page"]' }]

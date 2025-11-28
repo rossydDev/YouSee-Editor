@@ -11,6 +11,8 @@ import {
   FilePlus,
   Save,
   Type,
+  Bookmark,
+  Printer,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -89,6 +91,38 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
       {/* Grupo 2: Elementos de Roteiro (O Coração do YouSee) */}
       <div className="flex items-center gap-2">
         <button
+          onClick={() => {
+            // Logic: Create a new PHYSICAL sheet with the STORY HEADER at the top
+
+            // 1. Calculate the position to insert (at the end of the document)
+            const endPos = editor.state.doc.content.size;
+
+            editor
+              .chain()
+              .focus()
+              // 2. Insert the new Physical Page structure
+              .insertContentAt(endPos, {
+                type: "page",
+                content: [
+                  // It starts with the Story Header (PAGE X)
+                  { type: "storyPageHeader" },
+                  // Then a blank Panel ready for use
+                  { type: "panel", content: [{ type: "text", text: " " }] },
+                  // Then a paragraph for action
+                  { type: "paragraph" },
+                ],
+              })
+              // 3. Scroll to the new page so the user sees it
+              .scrollIntoView()
+              .run();
+          }}
+          className={`${btnClass} ${isActive("storyPageHeader")}`} // Note: isActive might not light up on click anymore since it's an action, not a state, but that's fine.
+          title="New Story Page (Starts on new Sheet)"
+        >
+          <Bookmark size={18} />
+          <span className="hidden xl:inline">Página</span>
+        </button>
+        <button
           onClick={() => editor.chain().focus().setNode("panel").run()}
           className={`${btnClass} ${isActive("panel")}`}
         >
@@ -133,31 +167,13 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
       {/* Grupo 3: Ações de Página */}
       <div className="flex items-center gap-2 border-l border-zinc-800 pl-4 ml-4">
         {/* Botão para testar nossa futura Paginação Manual/Auto */}
-
-        <button
-          onClick={() => {
-            // Calcula o final do documento
-            const endPos = editor.state.doc.content.size;
-
-            editor
-              .chain()
-              .focus()
-              // Insere a nova página LÁ NO FINAL, garantindo a ordem
-              .insertContentAt(endPos, {
-                type: "page",
-                content: [
-                  { type: "panel", content: [{ type: "text", text: " " }] },
-                  { type: "paragraph" },
-                ],
-              })
-              // Rola a tela até a nova página
-              .scrollIntoView()
-              .run();
-          }}
-          className={btnClass}
+        <button 
+          onClick={() => window.print()} 
+          className="bg-zinc-800 hover:bg-zinc-700 text-gray-200 px-4 py-1.5 rounded text-sm font-bold flex items-center gap-2 transition-colors border border-zinc-700"
+          title="Exportar como PDF"
         >
-          <FilePlus size={18} />
-          <span className="hidden sm:inline">Nova Pág</span>
+          <Printer size={16} />
+          <span className="hidden sm:inline">PDF</span>
         </button>
 
         <button className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-1.5 rounded text-sm font-bold flex items-center gap-2 transition-colors">

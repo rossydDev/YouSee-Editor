@@ -13,55 +13,52 @@
 }
 
 @layer components {
-  /* --- 1. COMPORTAMENTO DO EDITOR (Mesa vs Papel) --- */
+  /* --- 1. COMPORTAMENTO DO EDITOR --- */
 
   /* O Editor (O "Vidro") */
-  /* pointer-events-none: O clique "atravessa" o editor e atinge o fundo preto real */
   .ProseMirror {
     @apply outline-none pointer-events-none min-h-screen flex flex-col items-center;
-    /* Inicia o contador de Páginas */
+    /* Inicia o contador de Páginas Global */
     counter-reset: page-counter; 
   }
 
-  /* A Página (O "Papel") */
-  /* pointer-events-auto: O clique é capturado aqui para você poder escrever */
+  /* A Página Física (O "Papel") */
   .page-node {
     @apply cursor-text shadow-xl pointer-events-auto relative; 
     
-    /* Lógica de Contagem */
-    counter-increment: page-counter;     /* +1 Página */
-    counter-reset: panel-counter;        /* Reseta Painéis */
+    /* OBSERVE: Removemos o counter-increment daqui! 
+       A folha cinza não conta mais nada, ela é apenas o container visual. */
   }
 
-  /* --- 2. DESTAQUES VISUAIS (Highlight/Focus) --- */
+  /* --- 2. A NOVA LÓGICA DE PÁGINAS (Story Header) --- */
 
-  /* Regra Geral */
-  .ProseMirror .has-focus {
-    @apply border-orange-500;
+  /* O Cabeçalho da História ("PAGE X") */
+  .story-page-header {
+    /* AGORA SIM: É este texto que aumenta o número da página */
+    counter-increment: page-counter;
+    
+    /* E é ele que zera os painéis para começar uma nova contagem */
+    counter-reset: panel-counter;
   }
 
-  /* Refinamento para Nós de Texto (Personagem, Diálogo, Parágrafo) */
-  /* Borda lateral esquerda (estilo marcador) */
-  .ProseMirror p.has-focus,
-  .character-node.has-focus,
-  .dialogue-node.has-focus,
-  .sfx-node.has-focus {
-    @apply border-l-4 border-t-0 border-b-0 border-r-0 pl-4 border-orange-500 rounded-none;
+  /* O texto automático "PAGE X" antes do cabeçalho */
+  .story-page-header::before {
+    content: "PAGE " counter(page-counter);
+    @apply mr-2;
   }
 
-  /* Refinamento Exclusivo para o PAINEL */
-  /* Borda completa quando focado */
-  panel-block.has-focus .block,
-  .block.has-focus { 
-     @apply border-orange-500;
+  /* O Slot do React (Canto superior direito da folha) */
+  /* Ele mostra o número da página ATUAL baseado no último header que o CSS viu */
+  .page-number-slot::after {
+    content: "PAGE " counter(page-counter);
   }
 
-  /* --- 3. NUMERAÇÃO AUTOMÁTICA (Counters) --- */
+  /* --- 3. PAINÉIS --- */
 
-  /* O Painel (Panel Node) */
+  /* O Painel */
   panel-block {
     counter-increment: panel-counter; /* +1 Painel */
-    @apply block mt-6; /* Espaçamento entre cenas */
+    @apply block mt-6 mb-8; /* Espaçamento generoso entre cenas */
   }
 
   /* A Etiqueta do Painel ("PANEL 1:") */
@@ -70,9 +67,121 @@
     @apply text-orange-500 mr-2 font-bold inline-block; 
   }
 
-  /* [NOVO] O Número da Página ("PAGE 1") */
-  /* Esta regra preenche o slot vazio <span> lá do React */
-  .page-number-slot::after {
-    content: "PAGE " counter(page-counter);
+  /* --- 4. DESTAQUES VISUAIS (Highlight/Focus) --- */
+
+  .ProseMirror .has-focus {
+    @apply border-orange-500;
+  }
+
+  /* Marcador lateral laranja */
+  .ProseMirror p.has-focus,
+  .character-node.has-focus,
+  .dialogue-node.has-focus,
+  .sfx-node.has-focus {
+    @apply border-l-4 border-t-0 border-b-0 border-r-0 pl-4 border-orange-500 rounded-none;
+  }
+
+  /* Borda completa para blocos maiores */
+  panel-block.has-focus .block,
+  .block.has-focus { 
+     @apply border-orange-500;
+  }
+}
+
+/* --- MODO DE IMPRESSÃO / EXPORTAÇÃO PDF --- */
+@media print {
+  /* 1. CONFIGURAÇÃO DO PAPEL */
+  @page {
+    size: A4;
+    margin: 20mm;
+  }
+
+  /* 2. DESTRAVAMENTO GLOBAL (A Correção do Corte) */
+  /* Força html e body a crescerem infinitamente */
+  html, body {
+    height: auto !important;
+    overflow: visible !important;
+    background-color: white !important;
+  }
+
+  /* Reseta TODOS os containers pais (main, div) para não travarem a altura */
+  /* Isso anula o h-screen e overflow-y-auto do React */
+  div, main, section {
+    display: block !important; /* Desliga Flexbox */
+    height: auto !important;   /* Desliga h-screen */
+    overflow: visible !important; /* Desliga scroll interno */
+    position: static !important;
+  }
+
+  /* 3. ESCONDER INTERFACE */
+  /* Escondemos explicitamente o que não queremos */
+  .fixed, 
+  ::-webkit-scrollbar,
+  button,
+  .editor-toolbar { /* Se tiver classe na toolbar, ou use seletores específicos */
+    display: none !important;
+  }
+
+  /* 4. VISIBILIDADE DO EDITOR */
+  /* Apesar de resetarmos as divs acima, garantimos que o editor apareça */
+  .ProseMirror, .ProseMirror * {
+    visibility: visible;
+  }
+
+  /* 5. O EDITOR (Container Interno) */
+  .ProseMirror {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+  }
+
+  /* 6. A PÁGINA FÍSICA (Controle de Quebra) */
+  .page-node {
+    /* MUDANÇA: Largura e Altura automáticas para não gerar overflow */
+    width: auto !important;
+    min-height: auto !important; 
+    height: auto !important;
+    
+    /* Margens e Padding */
+    margin: 0 !important;
+    padding: 0 !important; /* Removemos o padding fixo para evitar somar no tamanho */
+    
+    /* Limpeza visual */
+    border: none !important;
+    box-shadow: none !important;
+    background-color: white !important;
+    
+    /* A ÚNICA REGRA QUE IMPORTA: Quebrar a página depois deste bloco */
+    break-after: page !important;
+    page-break-after: always !important;
+    break-inside: avoid !important;
+    
+    position: relative !important;
+    display: block !important;
+  }
+
+  /* 7. TEMA PRETO E BRANCO */
+  .page-node p, 
+  .dialogue-node, 
+  .character-node, 
+  .story-page-header,
+  span {
+    color: black !important;
+    text-shadow: none !important;
+  }
+
+  panel-block .block {
+    border: 2px solid black !important;
+    background: transparent !important;
+    color: black !important;
+  }
+  
+  panel-block::before {
+    color: black !important;
+  }
+
+  .has-focus {
+    border-color: transparent !important;
   }
 }
