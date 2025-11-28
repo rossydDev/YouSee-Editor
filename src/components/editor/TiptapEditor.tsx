@@ -12,17 +12,17 @@ import { ScreenplayDocument } from "./extensions/Document";
 import { Page } from "./extensions/Page";
 import { StoryPageHeader } from "./extensions/StoryPageHeader";
 import { EditorToolbar } from "./EditorToolbar";
-import { useEffect, useState } from "react";
-import { TextSelection } from "@tiptap/pm/state";
+import { useEffect } from "react";
 
-const STORAGE_KEY = "yousee-content-v1";
+// IMPORTS NOVOS (Nossos Hooks)
+import { usePagination } from "@/hooks/usePagination";
+import { useAutoSave } from "@/hooks/useAutoSave";
 
 const DEFAULT_CONTENT = `
    <div data-type="page">
        <story-page-header></story-page-header>
        <panel-block>EXT. RUA DE KASTELLUM - NOITE</panel-block>
        <p>A chuva cai pesada sobre os paralelepípedos.</p>
-
        <panel-block>INT. TAVERNA</panel-block>
        <character-node>BOB</character-node>
        <dialogue-node>Essa chuva não vai parar nunca?</dialogue-node>
@@ -30,8 +30,7 @@ const DEFAULT_CONTENT = `
 `;
 
 export function TipTapEditor() {
-  const [isLoaded, setIsLoaded] = useState(false);
-
+  // 1. Configuração Básica do Editor
   const editor = useEditor({
     extensions: [
       StarterKit.configure({ document: false }),
@@ -50,110 +49,21 @@ export function TipTapEditor() {
     editorProps: {
       attributes: { class: "outline-none" },
     },
-    onUpdate({ editor }) {
-      // Salva apenas se já estiver carregado para evitar sobrescrever com o padrão
-      if (!isLoaded) return;
-      
-      const json = editor.getJSON();
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(json));
-    },
+    // Conectamos o save aqui embaixo depois de inicializar o hook
   });
 
-  // --- 1. CARREGAR (Correção com Microtask) ---
+  // 2. Injetando os Superpoderes (Hooks)
+  const { isLoaded, saveContent } = useAutoSave(editor);
+  usePagination(editor);
+
+  // 3. Conectando o evento de salvar manualmente
+  // (Precisamos fazer isso via useEffect pois o saveContent vem do hook)
   useEffect(() => {
     if (!editor) return;
-    if (isLoaded) return;
+    editor.on('update', saveContent);
+    return () => { editor.off('update', saveContent) };
+  }, [editor, saveContent]);
 
-    // queueMicrotask: Agenda para rodar logo após o ciclo atual do React
-    queueMicrotask(() => {
-      const savedContent = localStorage.getItem(STORAGE_KEY);
-      
-      if (savedContent) {
-        try {
-          const json = JSON.parse(savedContent);
-          // O editor já está montado (embora invisível), então é seguro setar conteúdo
-          editor.commands.setContent(json);
-          // Pequena pausa para garantir que o cursor vá para o fim
-          editor.commands.focus('end');
-        } catch (e) {
-          console.error("Erro ao carregar:", e);
-        }
-      }
-      
-      // Libera a visualização
-      setIsLoaded(true);
-    });
-  }, [editor, isLoaded]);
-
-  // --- MOTOR DE PAGINAÇÃO (Mantido igual) ---
-  useEffect(() => {
-    if (!editor || editor.isDestroyed) return;
-    let resizeObserver: ResizeObserver | null = null;
-
-    const setupObserver = () => {
-      if (editor.isDestroyed) return;
-      const pageElements = editor.view.dom.querySelectorAll('.page-node');
-      if (pageElements.length === 0) return;
-      const lastPageElement = pageElements[pageElements.length - 1];
-
-      if (resizeObserver) resizeObserver.disconnect();
-
-      resizeObserver = new ResizeObserver((entries) => {
-        for (const entry of entries) {
-          if (entry.target.isConnected && entry.contentRect.height > 1050) {
-            resizeObserver?.disconnect();
-            
-            console.log("🚨 ESTOURO DETECTADO! Migrando...");
-
-            editor.commands.command(({ tr, state, dispatch }) => {
-              if (!dispatch) return true;
-              
-              const pageIndex = Array.from(pageElements).indexOf(entry.target as HTMLElement);
-              if (pageIndex === -1) return false;
-              
-              const pageNode = state.doc.content.child(pageIndex);
-              if (!pageNode || pageNode.type.name !== 'page') return false;
-              
-              const lastChild = pageNode.lastChild;
-              if (!lastChild) return false;
-
-              let pos = 0;
-              for (let i = 0; i < pageIndex; i++) pos += state.doc.content.child(i).nodeSize;
-              
-              const pageStartPos = pos; 
-              const from = pageStartPos + pageNode.nodeSize - lastChild.nodeSize - 1;
-              const to = pageStartPos + pageNode.nodeSize - 1;
-
-              const slice = tr.doc.slice(from, to);
-              tr.delete(from, to);
-              
-              const contentToMove = slice.content.size > 0 ? slice.content : state.schema.nodes.paragraph.create();
-              const newPageNode = state.schema.nodes.page.create(null, contentToMove);
-              const insertPos = tr.doc.content.size;
-              tr.insert(insertPos, newPageNode);
-
-              try {
-                const newSelection = TextSelection.create(tr.doc, insertPos + 2);
-                tr.setSelection(newSelection);
-              } catch (e) { console.warn(e); }
-              
-              return true;
-            });
-            setTimeout(() => setupObserver(), 200);
-          }
-        }
-      });
-      resizeObserver.observe(lastPageElement);
-    };
-
-    editor.on("update", setupObserver);
-    setupObserver();
-
-    return () => {
-      editor.off("update", setupObserver);
-      if (resizeObserver) resizeObserver.disconnect();
-    };
-  }, [editor]);
 
   if (!editor) return null;
 
@@ -172,7 +82,6 @@ export function TipTapEditor() {
     >
       <EditorToolbar editor={editor} />
       <div className="w-full">
-        {/* Renderizamos SEMPRE, apenas escondemos com CSS se não estiver loaded */}
         <EditorContent editor={editor} />
       </div>
     </div>
