@@ -23,7 +23,7 @@ export function usePagination(editor: Editor | null) {
       resizeObserver = new ResizeObserver((entries) => {
         for (const entry of entries) {
           // Limite de segurança (A4)
-          if (entry.target.isConnected && entry.contentRect.height > 1050) {
+          if (entry.target.isConnected && entry.contentRect.height > 1130) {
             resizeObserver?.disconnect();
             
             console.log("🚨 ESTOURO DETECTADO! Migrando conteúdo...");

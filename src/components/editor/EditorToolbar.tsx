@@ -92,32 +92,54 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
       <div className="flex items-center gap-2">
         <button
           onClick={() => {
-            // Logic: Create a new PHYSICAL sheet with the STORY HEADER at the top
+            const { doc } = editor.state;
+            const lastNode = doc.lastChild;
+            const endPos = doc.content.size;
 
-            // 1. Calculate the position to insert (at the end of the document)
-            const endPos = editor.state.doc.content.size;
+            // Lógica de Detecção de Página Vazia
+            // Verificamos se o último nó é uma página e se não tem texto escrito
+            const isLastPageEmpty = 
+              lastNode && 
+              lastNode.type.name === 'page' && 
+              lastNode.textContent.trim() === '';
 
-            editor
-              .chain()
-              .focus()
-              // 2. Insert the new Physical Page structure
-              .insertContentAt(endPos, {
-                type: "page",
-                content: [
-                  // It starts with the Story Header (PAGE X)
-                  { type: "storyPageHeader" },
-                  // Then a blank Panel ready for use
-                  { type: "panel", content: [{ type: "text", text: " " }] },
-                  // Then a paragraph for action
-                  { type: "paragraph" },
-                ],
-              })
-              // 3. Scroll to the new page so the user sees it
-              .scrollIntoView()
-              .run();
+            // A estrutura padrão de uma Nova Página de História
+            const newPageContent = [
+              { type: "storyPageHeader" },
+              { type: "panel", content: [{ type: "text", text: " " }] },
+              { type: "paragraph" },
+            ];
+
+            if (isLastPageEmpty) {
+              // CENÁRIO A: A última página está vazia (aproveitar ela!)
+              
+              // 1. Calculamos onde essa página começa
+              const lastPagePos = endPos - lastNode.nodeSize;
+              
+              // 2. Substituímos o conteúdo dela
+              editor.chain()
+                .focus()
+                // Apaga o conteúdo atual da página vazia (para limpar parágrafos soltos)
+                .deleteRange({ from: lastPagePos + 1, to: endPos - 1 })
+                // Insere a estrutura correta (Header + Painel)
+                .insertContentAt(lastPagePos + 1, newPageContent)
+                .run();
+                
+            } else {
+              // CENÁRIO B: A página anterior tem conteúdo (criar nova!)
+              
+              editor.chain()
+                .focus()
+                .insertContentAt(endPos, {
+                  type: "page",
+                  content: newPageContent,
+                })
+                .scrollIntoView()
+                .run();
+            }
           }}
-          className={`${btnClass} ${isActive("storyPageHeader")}`} // Note: isActive might not light up on click anymore since it's an action, not a state, but that's fine.
-          title="New Story Page (Starts on new Sheet)"
+          className={`${btnClass} ${isActive("storyPageHeader")}`}
+          title="Nova Página da História"
         >
           <Bookmark size={18} />
           <span className="hidden xl:inline">Página</span>

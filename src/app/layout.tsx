@@ -13,8 +13,11 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "YouseeYouSee | Editor de Roteiro HQ",
+  title: "YouSee | Editor de Roteiro HQ",
   description: "Editor de roteiros de quadrinhos focado em performance e design Dark Mode.",
+  icons :{
+    icon: '/logo.svg',
+  }
 };
 
 export default function RootLayout({

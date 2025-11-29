@@ -1,37 +1,32 @@
-import { Node, mergeAttributes } from "@tiptap/core";
+import { Node, mergeAttributes } from '@tiptap/core'
 
 export const Character = Node.create({
-  name: "character",
-  group: "block",
-  content: "text*", // Apenas texto puro, sem formatação (bold/italic)
+  name: 'character',
+  group: 'block',
+  content: 'text*',
 
   parseHTML() {
-    return [{ tag: "character-node" }];
+    return [{ tag: 'character-node' }]
   },
 
   renderHTML({ HTMLAttributes }) {
     return [
-      "div",
+      'div',
       mergeAttributes(HTMLAttributes, {
-        class:
-          "character-node mt-6 mb-0 ml-[40%] text-orange-500 font-bold uppercase tracking-widest", // Margem esquerda para indentação de roteiro
+        class: 'character-node mt-6 mb-0 ml-[40%] text-orange-500 font-bold uppercase tracking-widest',
       }),
       0,
-    ];
+    ]
   },
 
   addKeyboardShortcuts() {
     return {
-      Tab: () => {
-        // <--- Mudamos aqui de Enter para Tab
-        // A lógica permanece a mesma:
-        // Se estiver no Personagem e der Tab, cria um Diálogo embaixo
-        return this.editor
-          .chain()
-          .insertContentAt(this.editor.state.selection.to, { type: "dialogue" })
+      'Tab': () => {
+        return this.editor.chain()
+          .insertContentAt(this.editor.state.selection.to, { type: 'dialogue' })
           .focus()
-          .run();
+          .run()
       },
-    };
+    }
   },
-});
+})
