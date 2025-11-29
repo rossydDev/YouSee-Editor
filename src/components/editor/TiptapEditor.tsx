@@ -12,7 +12,7 @@ import { ScreenplayDocument } from "./extensions/Document";
 import { Page } from "./extensions/Page";
 import { StoryPageHeader } from "./extensions/StoryPageHeader";
 import { EditorToolbar } from "./EditorToolbar";
-import { useEffect, useState } from "react"; // <--- CORREÇÃO 1: useState importado aqui!
+import { useEffect, useState } from "react";
 import { Sidebar } from "./Sidebar";
 import { Menu } from "lucide-react";
 
@@ -24,18 +24,14 @@ import { AutocompleteExtension } from "./extensions/AutocompleteExtension";
 const DEFAULT_CONTENT = `
    <div data-type="page">
        <story-page-header></story-page-header>
-       
-       <panel-block> </panel-block>
-       
-       <p></p>
    </div>
 `;
 
 interface TipTapEditorProps {
-  scriptID: string;
+  scriptId: string;
 }
 
-export function TipTapEditor({ scriptID }: TipTapEditorProps) {
+export function TipTapEditor({ scriptId }: TipTapEditorProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // 1. Configuração do Editor
@@ -58,18 +54,20 @@ export function TipTapEditor({ scriptID }: TipTapEditorProps) {
     editorProps: {
       attributes: { class: "outline-none" },
     },
-    // Nota: Removi o onSelectionUpdate daqui para usar o Hook abaixo (mais rápido)
   });
 
-  // 2. Hooks de Funcionalidade
+  // 2. Injetando os Superpoderes (Hooks)
+  // Pegamos o saveStatus daqui
   const { 
     isLoaded, 
     saveContent, 
+    saveStatus, // <--- Importante
     title, setTitle,
-    seriesTitle, setSeriesTitle,     // <--- NOVO
-    chapterNumber, setChapterNumber , existingSeries // <--- NOVO
-  } = useAutoSave(editor, scriptID);
-
+    seriesTitle, setSeriesTitle,
+    chapterNumber, setChapterNumber,
+    existingSeries
+  } = useAutoSave(editor, scriptId);
+  
   usePagination(editor);
 
   // 3. Salvamento Manual
@@ -79,12 +77,11 @@ export function TipTapEditor({ scriptID }: TipTapEditorProps) {
     return () => { editor.off('update', saveContent) };
   }, [editor, saveContent]);
 
-  // 4. CORREÇÃO 2: Scroll Cinematográfico (Instantâneo e Centralizado)
+  // 4. Scroll Cinematográfico
   useEffect(() => {
     if (!editor) return;
 
     const handleScroll = () => {
-      // requestAnimationFrame garante que o scroll rode no próximo frame de pintura (sem lag)
       requestAnimationFrame(() => {
         const { from } = editor.state.selection;
         const dom = editor.view.domAtPos(from).node as HTMLElement;
@@ -92,14 +89,13 @@ export function TipTapEditor({ scriptID }: TipTapEditorProps) {
         if (dom && dom.scrollIntoView) {
           dom.scrollIntoView({ 
             behavior: 'smooth', 
-            block: 'center', // Garante que o texto fique no MEIO da tela
-            inline: 'nearest'
+            block: 'center', 
+            inline: 'nearest' 
           });
         }
       });
     };
 
-    // Ouve qualquer mudança de cursor (digitar ou clicar)
     editor.on('transaction', handleScroll);
     return () => { editor.off('transaction', handleScroll) };
   }, [editor]);
@@ -121,22 +117,23 @@ export function TipTapEditor({ scriptID }: TipTapEditorProps) {
       </div>
 
       <EditorToolbar 
-         editor={editor} 
-         title={title}       
-         setTitle={setTitle} 
-         seriesTitle={seriesTitle}
-         setSeriesTitle={setSeriesTitle}
-         chapterNumber = {chapterNumber}
-         setChapterNumber={setChapterNumber}
-         existingSeries={existingSeries}
-      />
+        editor={editor} 
+        title={title}
+        setTitle={setTitle}
+        seriesTitle={seriesTitle}
+        setSeriesTitle={setSeriesTitle}
+        chapterNumber={chapterNumber}
+        setChapterNumber={setChapterNumber}
+        existingSeries={existingSeries}
+        saveStatus={saveStatus} // <--- A CORREÇÃO: Passando a variável explicitamente
+      /> 
 
       <div className="flex flex-1 pt-14 overflow-hidden relative">
         <Sidebar editor={editor} isOpen={isSidebarOpen} />
 
         <div 
           className={`
-            flex-1 h-full overflow-y-auto overflow-x-hidden cursor-default bg-zinc-950
+            flex-1 h-full overflow-y-auto cursor-default bg-zinc-950
             transition-all duration-300
             ${isLoaded ? 'opacity-100' : 'opacity-0'}
             xl:pl-64
@@ -146,7 +143,6 @@ export function TipTapEditor({ scriptID }: TipTapEditorProps) {
             setIsSidebarOpen(false);
           }}
         >
-          {/* Padding gigante embaixo (pb-[50vh]) permite rolar o fim do texto até o topo */}
           <div className="flex justify-center w-full py-12 pt-20 pb-[50vh]">
              <EditorContent editor={editor} />
           </div>
