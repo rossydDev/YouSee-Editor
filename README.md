@@ -9,21 +9,24 @@ Desenvolvido para resolver o problema de formatação de roteiros de HQ, oferece
 ![YouSee Editor Screenshot](https://via.placeholder.com/800x400?text=Screenshot+do+Editor+Aqui)
 *(Sugestão: Substitua este link por um print real do seu editor depois!)*
 
-## ✨ Funcionalidades Principais (MVP)
+## ✨ Funcionalidades Principais
 
+- **📚 Organização de Séries:**
+  - Dashboard visual para gerenciar múltiplos roteiros.
+  - Agrupamento automático por **Série** e ordenação por **Capítulo**.
+  - Identidade visual "Dark & Amber" consistente.
+- **🧠 Autocomplete Inteligente:**
+  - Sugestão automática de nomes de **Personagens** recorrentes (`@` ou digitação).
+  - Autocomplete para nomes de **Séries** já existentes.
 - **📝 Formatação de Roteiro:** Blocos semânticos para Cenas, Personagens, Diálogos e SFX.
 - **📄 Engine de Paginação Automática:**
-  - Detecta automaticamente quando o conteúdo excede o tamanho A4.
-  - Move o conteúdo para uma nova folha sem quebrar o fluxo.
-- **🔢 Numeração Inteligente:**
-  - Separação entre **Folha Física** (Impressão) e **Página da História** (Narrativa).
-  - Contagem automática de painéis por página.
+  - Detecta quando o conteúdo excede o tamanho A4 e cria novas páginas.
+  - Suporte a "Páginas de História" vs "Folhas de Impressão".
 - **💾 Persistência Local-First:**
   - Salvamento automático no `localStorage`.
-  - Seus dados sobrevivem a um *refresh* ou fechamento de aba.
-- **🖨️ Exportação PDF Limpa:**
-  - Transforma o tema "Dark & Amber" em "Preto no Branco" automaticamente para impressão.
-  - Respeita as quebras de página A4 perfeitamente.
+- **🖨️ Exportação PDF Profissional:**
+  - Formatação **Standard Industry** (Courier 12pt, Margens de Cinema).
+  - Remove a interface escura para impressão limpa em preto e branco.
 
 ## 🛠️ Stack Tecnológica
 

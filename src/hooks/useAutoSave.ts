@@ -1,53 +1,74 @@
 import { Editor } from "@tiptap/react";
 import { useEffect, useState, useCallback } from "react";
-import { getScriptById, saveScript } from "@/lib/storage";
+import { getScriptById, getAllScripts, saveScript } from "@/lib/storage"; // Importe getAllScripts
 
 export function useAutoSave(editor: Editor | null, scriptId: string) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   
-  // Novo estado para o Título
   const [title, setTitle] = useState("Sem Título");
+  const [seriesTitle, setSeriesTitle] = useState("");
+  const [chapterNumber, setChapterNumber] = useState<string>("");
+  
+  // NOVO: Lista de séries existentes para o autocomplete
+  const [existingSeries, setExistingSeries] = useState<string[]>([]);
 
-  // 1. CARREGAR (Load)
+  // 1. CARREGAR
   useEffect(() => {
-    // Carrega apenas uma vez quando o editor estiver pronto (ou nulo na primeira render)
     if (isLoaded) return; 
 
+    // A. Carrega o roteiro atual
     const script = getScriptById(scriptId);
-
     if (script) {
-      // Carrega o Título
       setTitle(script.title || "Sem Título");
+      setSeriesTitle(script.seriesTitle || "");
+      setChapterNumber(script.chapterNumber?.toString() || "");
 
-      // Carrega o Conteúdo
       if (script.content && editor) {
         queueMicrotask(() => {
           try {
             editor.commands.setContent(script.content);
             editor.commands.focus('end');
           } catch (e) {
-            console.error("Erro ao renderizar roteiro:", e);
+            console.error("Erro ao renderizar:", e);
           }
         });
       }
     }
+
+    // B. Carrega a lista de séries para sugestão
+    const allScripts = getAllScripts();
+    // Filtra nomes únicos e não vazios
+    const uniqueSeries = Array.from(new Set(
+      allScripts
+        .map(s => s.seriesTitle)
+        .filter((s): s is string => !!s && s.trim() !== "")
+    )).sort();
     
-    // Marca como carregado mesmo se não tiver script (novo)
+    setExistingSeries(uniqueSeries);
+    
     setIsLoaded(true);
   }, [editor, scriptId, isLoaded]);
 
-  // 2. SALVAR (Save Function)
+  // 2. SALVAR
   const saveContent = useCallback(() => {
     if (!editor || !isLoaded) return;
     
     const json = editor.getJSON();
-    
-    // Agora salvamos o Título também!
-    saveScript(scriptId, json, title);
+    const chapNum = chapterNumber ? parseInt(chapterNumber) : null;
+
+    saveScript(scriptId, json, title, seriesTitle, chapNum);
     
     setLastSaved(new Date());
-  }, [editor, isLoaded, scriptId, title]); // title é dependência agora
+  }, [editor, isLoaded, scriptId, title, seriesTitle, chapterNumber]);
 
-  return { isLoaded, saveContent, lastSaved, title, setTitle };
+  return { 
+    isLoaded, 
+    saveContent, 
+    lastSaved, 
+    title, setTitle,
+    seriesTitle, setSeriesTitle,
+    chapterNumber, setChapterNumber,
+    existingSeries // <--- Retorna a lista
+  };
 }

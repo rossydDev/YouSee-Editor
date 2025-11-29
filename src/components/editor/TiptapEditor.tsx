@@ -23,9 +23,11 @@ import { AutocompleteExtension } from "./extensions/AutocompleteExtension";
 
 const DEFAULT_CONTENT = `
    <div data-type="page">
-       <story-page-header>
-        <panel-block></panel-block>
-       </story-page-header>
+       <story-page-header></story-page-header>
+       
+       <panel-block> </panel-block>
+       
+       <p></p>
    </div>
 `;
 
@@ -60,7 +62,14 @@ export function TipTapEditor({ scriptID }: TipTapEditorProps) {
   });
 
   // 2. Hooks de Funcionalidade
-  const { isLoaded, saveContent, title, setTitle } = useAutoSave(editor, scriptID);
+  const { 
+    isLoaded, 
+    saveContent, 
+    title, setTitle,
+    seriesTitle, setSeriesTitle,     // <--- NOVO
+    chapterNumber, setChapterNumber , existingSeries // <--- NOVO
+  } = useAutoSave(editor, scriptID);
+
   usePagination(editor);
 
   // 3. Salvamento Manual
@@ -113,8 +122,13 @@ export function TipTapEditor({ scriptID }: TipTapEditorProps) {
 
       <EditorToolbar 
          editor={editor} 
-         title={title}       // Passando props
-         setTitle={setTitle} // Passando props
+         title={title}       
+         setTitle={setTitle} 
+         seriesTitle={seriesTitle}
+         setSeriesTitle={setSeriesTitle}
+         chapterNumber = {chapterNumber}
+         setChapterNumber={setChapterNumber}
+         existingSeries={existingSeries}
       />
 
       <div className="flex flex-1 pt-14 overflow-hidden relative">

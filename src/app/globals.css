@@ -216,3 +216,14 @@
   /* Limpeza Final */
   .has-focus { border-color: transparent !important; }
 }
+
+/* Remove setinhas padrão do input number */
+input[type=number]::-webkit-inner-spin-button, 
+input[type=number]::-webkit-outer-spin-button { 
+  -webkit-appearance: none; 
+  margin: 0; 
+}
+input[type=number] {
+  -moz-appearance: textfield; /* Firefox */
+}
+
