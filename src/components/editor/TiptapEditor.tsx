@@ -23,11 +23,17 @@ import { AutocompleteExtension } from "./extensions/AutocompleteExtension";
 
 const DEFAULT_CONTENT = `
    <div data-type="page">
-       <story-page-header></story-page-header>
+       <story-page-header>
+        <panel-block></panel-block>
+       </story-page-header>
    </div>
 `;
 
-export function TipTapEditor() {
+interface TipTapEditorProps {
+  scriptID: string;
+}
+
+export function TipTapEditor({ scriptID }: TipTapEditorProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // 1. Configuração do Editor
@@ -54,7 +60,7 @@ export function TipTapEditor() {
   });
 
   // 2. Hooks de Funcionalidade
-  const { isLoaded, saveContent } = useAutoSave(editor);
+  const { isLoaded, saveContent, title, setTitle } = useAutoSave(editor, scriptID);
   usePagination(editor);
 
   // 3. Salvamento Manual
@@ -105,7 +111,11 @@ export function TipTapEditor() {
         </button>
       </div>
 
-      <EditorToolbar editor={editor} /> 
+      <EditorToolbar 
+         editor={editor} 
+         title={title}       // Passando props
+         setTitle={setTitle} // Passando props
+      />
 
       <div className="flex flex-1 pt-14 overflow-hidden relative">
         <Sidebar editor={editor} isOpen={isSidebarOpen} />

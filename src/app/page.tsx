@@ -42,7 +42,7 @@ export default function Home() {
 
         <div className="flex gap-4 items-center flex-col sm:flex-row">
           <Link 
-            href="/editor" 
+            href="/dashboard" 
             className="group bg-orange-600 hover:bg-orange-700 text-white px-8 py-4 rounded-lg font-bold text-lg transition-all flex items-center gap-2 shadow-lg shadow-orange-900/20 hover:shadow-orange-900/40 hover:-translate-y-1"
           >
             Começar a Escrever
