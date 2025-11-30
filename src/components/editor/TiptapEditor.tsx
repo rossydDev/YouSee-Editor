@@ -20,6 +20,7 @@ import { EditorLayout } from "@/components/layout/EditorLayout";
 import { usePagination } from "@/hooks/usePagination";
 import { useAutoSave } from "@/hooks/useAutoSave";
 import { useEffect, useState } from "react";
+import { ScriptBehavior } from "./extensions/ScriptBehavior";
 
 const DEFAULT_CONTENT = `
    <div data-type="page">
@@ -49,6 +50,7 @@ export function TipTapEditor({ scriptId }: TipTapEditorProps) {
       ScreenplayShortcuts,
       Sfx,
       AutocompleteExtension,
+      ScriptBehavior,
       Focus.configure({ className: "has-focus", mode: "all" }),
     ],
     content: DEFAULT_CONTENT,
