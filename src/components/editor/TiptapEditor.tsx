@@ -50,7 +50,6 @@ export function TipTapEditor({ scriptId }: TipTapEditorProps) {
       ScreenplayShortcuts,
       Sfx,
       AutocompleteExtension,
-      ScriptBehavior,
       Focus.configure({ className: "has-focus", mode: "all" }),
     ],
     content: DEFAULT_CONTENT,
