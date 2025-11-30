@@ -11,15 +11,15 @@ import Focus from "@tiptap/extension-focus";
 import { ScreenplayDocument } from "./extensions/Document";
 import { Page } from "./extensions/Page";
 import { StoryPageHeader } from "./extensions/StoryPageHeader";
-import { EditorToolbar } from "./EditorToolbar";
-import { useEffect, useState } from "react";
-import { Sidebar } from "./Sidebar";
-import { Menu } from "lucide-react";
+import { AutocompleteExtension } from "./extensions/AutocompleteExtension";
 
-// IMPORTS DOS HOOKS
+// COMPONENTS & HOOKS
+import { EditorToolbar } from "./EditorToolbar";
+import { Sidebar } from "./Sidebar";
+import { EditorLayout } from "@/components/layout/EditorLayout";
 import { usePagination } from "@/hooks/usePagination";
 import { useAutoSave } from "@/hooks/useAutoSave";
-import { AutocompleteExtension } from "./extensions/AutocompleteExtension";
+import { useEffect, useState } from "react";
 
 const DEFAULT_CONTENT = `
    <div data-type="page">
@@ -32,9 +32,11 @@ interface TipTapEditorProps {
 }
 
 export function TipTapEditor({ scriptId }: TipTapEditorProps) {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  // Estado UI
+  // Começa fechado no mobile (padrão) e aberto no desktop (se quiser)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true); 
 
-  // 1. Configuração do Editor
+  // 1. EDITOR CONFIG
   const editor = useEditor({
     extensions: [
       StarterKit.configure({ document: false }),
@@ -56,12 +58,11 @@ export function TipTapEditor({ scriptId }: TipTapEditorProps) {
     },
   });
 
-  // 2. Injetando os Superpoderes (Hooks)
-  // Pegamos o saveStatus daqui
+  // 2. HOOKS
   const { 
     isLoaded, 
     saveContent, 
-    saveStatus, // <--- Importante
+    saveStatus, 
     title, setTitle,
     seriesTitle, setSeriesTitle,
     chapterNumber, setChapterNumber,
@@ -70,84 +71,69 @@ export function TipTapEditor({ scriptId }: TipTapEditorProps) {
   
   usePagination(editor);
 
-  // 3. Salvamento Manual
+  // 3. LISTENERS
   useEffect(() => {
     if (!editor) return;
+    
+    // Auto-save manual trigger
     editor.on('update', saveContent);
-    return () => { editor.off('update', saveContent) };
-  }, [editor, saveContent]);
 
-  // 4. Scroll Cinematográfico
-  useEffect(() => {
-    if (!editor) return;
-
+    // Scroll Cinematográfico
     const handleScroll = () => {
       requestAnimationFrame(() => {
         const { from } = editor.state.selection;
         const dom = editor.view.domAtPos(from).node as HTMLElement;
-        
         if (dom && dom.scrollIntoView) {
-          dom.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'center', 
-            inline: 'nearest' 
-          });
+          dom.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
         }
       });
     };
-
     editor.on('transaction', handleScroll);
-    return () => { editor.off('transaction', handleScroll) };
-  }, [editor]);
 
+    return () => { 
+      editor.off('update', saveContent);
+      editor.off('transaction', handleScroll);
+    };
+  }, [editor, saveContent]);
 
   if (!editor) return null;
 
+  // 4. RENDERIZAÇÃO LIMPA VIA LAYOUT
   return (
-    <div className="flex flex-col h-screen bg-zinc-950 text-gray-300 font-mono overflow-hidden">
-      
-      {/* Header Fixo Mobile */}
-      <div className="fixed top-0 left-0 right-0 z-50 h-14 bg-zinc-950 border-b border-zinc-800 flex items-center px-4 justify-between xl:hidden">
-        <button 
-          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded"
-        >
-          <Menu size={20} />
-        </button>
+    <EditorLayout
+      isSidebarOpen={isSidebarOpen}
+      setIsSidebarOpen={setIsSidebarOpen}
+      header={
+        <EditorToolbar 
+          editor={editor} 
+          title={title}
+          setTitle={setTitle}
+          seriesTitle={seriesTitle}
+          setSeriesTitle={setSeriesTitle}
+          chapterNumber={chapterNumber}
+          setChapterNumber={setChapterNumber}
+          existingSeries={existingSeries}
+          saveStatus={saveStatus}
+          isSidebarOpen = {isSidebarOpen}
+          toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+        />
+      }
+      sidebar={
+        <Sidebar 
+          editor={editor} 
+          onCloseMobile={() => setIsSidebarOpen(false)} 
+        />
+      }
+    >
+      <div 
+        className={`
+          flex justify-center w-full py-12 pt-10 pb-[50vh]
+          transition-opacity duration-500
+          ${isLoaded ? 'opacity-100' : 'opacity-0'}
+        `}
+      >
+         <EditorContent editor={editor} />
       </div>
-
-      <EditorToolbar 
-        editor={editor} 
-        title={title}
-        setTitle={setTitle}
-        seriesTitle={seriesTitle}
-        setSeriesTitle={setSeriesTitle}
-        chapterNumber={chapterNumber}
-        setChapterNumber={setChapterNumber}
-        existingSeries={existingSeries}
-        saveStatus={saveStatus} // <--- A CORREÇÃO: Passando a variável explicitamente
-      /> 
-
-      <div className="flex flex-1 pt-14 overflow-hidden relative">
-        <Sidebar editor={editor} isOpen={isSidebarOpen} />
-
-        <div 
-          className={`
-            flex-1 h-full overflow-y-auto cursor-default bg-zinc-950
-            transition-all duration-300
-            ${isLoaded ? 'opacity-100' : 'opacity-0'}
-            px-50 xl:pl-72
-          `}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) editor?.commands.blur();
-            setIsSidebarOpen(false);
-          }}
-        >
-          <div className="flex justify-center w-full py-12 pt-20 pb-[50vh]">
-             <EditorContent editor={editor} />
-          </div>
-        </div>
-      </div>
-    </div>
+    </EditorLayout>
   );
 }

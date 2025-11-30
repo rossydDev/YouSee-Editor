@@ -1,8 +1,5 @@
 @import "tailwindcss";
-@import "tailwindcss";
-@import "tippy.js/dist/tippy.css"; /* <--- ADICIONE ESTA LINHA */
-
-/* ... resto do arquivo ... */
+@import "tippy.js/dist/tippy.css";
 
 /* Configuração do Tema v4 */
 @theme {
@@ -13,71 +10,52 @@
 @layer base {
   body {
     @apply bg-zinc-950 text-gray-300 font-mono;
+    overflow-x: hidden; /* Evita rolagem horizontal global */
   }
 }
 
 @layer components {
   /* --- 1. COMPORTAMENTO DO EDITOR --- */
-
-  /* O Editor (O "Vidro") */
   .ProseMirror {
     @apply outline-none pointer-events-none min-h-screen flex flex-col items-center;
-    /* Inicia o contador de Páginas Global */
     counter-reset: page-counter; 
   }
 
-  /* A Página Física (O "Papel") */
   .page-node {
     @apply cursor-text shadow-xl pointer-events-auto relative; 
-    
-    /* OBSERVE: Removemos o counter-increment daqui! 
-       A folha cinza não conta mais nada, ela é apenas o container visual. */
   }
 
-  /* --- 2. A NOVA LÓGICA DE PÁGINAS (Story Header) --- */
-
-  /* O Cabeçalho da História ("PAGE X") */
+  /* --- 2. LÓGICA DE PÁGINAS --- */
   .story-page-header {
-    /* AGORA SIM: É este texto que aumenta o número da página */
     counter-increment: page-counter;
-    
-    /* E é ele que zera os painéis para começar uma nova contagem */
     counter-reset: panel-counter;
   }
 
-  /* O texto automático "PAGE X" antes do cabeçalho */
   .story-page-header::before {
     content: "PAGE " counter(page-counter);
     @apply mr-2;
   }
 
-  /* O Slot do React (Canto superior direito da folha) */
-  /* Ele mostra o número da página ATUAL baseado no último header que o CSS viu */
   .page-number-slot::after {
     content: "PAGE " counter(page-counter);
   }
 
   /* --- 3. PAINÉIS --- */
-
-  /* O Painel */
   panel-block {
-    counter-increment: panel-counter; /* +1 Painel */
-    @apply block mt-6 mb-8; /* Espaçamento generoso entre cenas */
+    counter-increment: panel-counter;
+    @apply block mt-6 mb-8;
   }
 
-  /* A Etiqueta do Painel ("PANEL 1:") */
   panel-block::before {
     content: "PANEL " counter(panel-counter);
     @apply text-orange-500 mr-2 font-bold inline-block; 
   }
 
-  /* --- 4. DESTAQUES VISUAIS (Highlight/Focus) --- */
-
+  /* --- 4. DESTAQUES VISUAIS --- */
   .ProseMirror .has-focus {
     @apply border-orange-500;
   }
 
-  /* Marcador lateral laranja */
   .ProseMirror p.has-focus,
   .character-node.has-focus,
   .dialogue-node.has-focus,
@@ -85,148 +63,58 @@
     @apply border-l-4 border-t-0 border-b-0 border-r-0 pl-4 border-orange-500 rounded-none;
   }
 
-  /* Borda completa para blocos maiores */
   panel-block.has-focus .block,
   .block.has-focus { 
      @apply border-orange-500;
   }
 }
 
-/* --- MODO DE IMPRESSÃO: PADRÃO HOLLYWOOD (CLEAN) --- */
-/* --- MODO DE IMPRESSÃO: ESTILO WRITERDUET --- */
-/* ===========================
-   1) RESETAR TUDO NO PRINT
-   ===========================*/
-@media print {
-  /* 1. RESET E PAPEL */
-  @page {
-    size: A4;
-    margin: 25mm 30mm; /* Margens laterais maiores (30mm) para mais respiro */
-  }
-
-  html, body, div, main, section {
-    display: block !important;
-    height: auto !important;
-    overflow: visible !important;
-    background-color: white !important;
-    position: static !important;
-  }
-
-  .fixed, ::-webkit-scrollbar, button, .editor-toolbar {
-    display: none !important;
-  }
-
-  .ProseMirror {
-    width: 100% !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    border: none !important;
-  }
-
-  /* 2. TIPOGRAFIA MASTER (O Segredo da Leitura) */
-  * {
-    /* Tenta Courier Prime primeiro (mais legível), depois Courier New */
-    font-family: "Courier Prime", "Courier New", Courier, monospace !important;
-    font-size: 12pt !important;
-    /* Entrelinha mais solta (1.2) em vez de apertada */
-    line-height: 1.2 !important; 
-    color: #000000 !important; /* Preto absoluto */
-    text-shadow: none !important;
-    -webkit-print-color-adjust: exact; /* Força cores exatas */
-  }
-
-  /* 3. A PÁGINA FÍSICA */
-  .page-node {
-    width: 100% !important;
-    min-height: auto !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    border: none !important;
-    box-shadow: none !important;
-    break-after: page !important;
-    page-break-after: always !important;
-    display: block !important;
-  }
-
-  /* 4. FORMATAÇÃO DOS ELEMENTOS */
-
-  /* Ação (Texto Corrido) */
-  p {
-    text-align: left;
-    margin-bottom: 1em !important;
-    width: 100%;
-  }
-
-  /* CENA / PAINEL (Slugline) */
-  panel-block {
-    display: block !important;
-    font-weight: bold !important;
-    text-transform: uppercase !important;
-    margin-top: 2em !important; /* Mais espaço antes da cena nova */
-    margin-bottom: 1em !important;
-    text-decoration: underline; /* O clássico sublinhado de cena */
-  }
-  
-  /* Limpeza interna do Painel */
-  panel-block .block {
-    border: none !important;
-    background: transparent !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    color: #000 !important;
-  }
-  
-  /* Prefixo "PANEL 1:" */
-  panel-block::before {
-    color: #000 !important;
-    font-weight: bold !important;
-    margin-right: 1ch !important; /* Espaço de 1 caractere */
-  }
-
-  /* PERSONAGEM (Quem fala) */
-  .character-node {
-    font-weight: bold !important;
-    text-transform: uppercase !important;
-    margin-top: 1.5em !important;
-    margin-bottom: 0.2em !important; /* Colado no diálogo */
-    
-    /* Centralização Visual */
-    margin-left: 40% !important; /* Recuo grande */
-    width: auto !important;
-  }
-
-  /* DIÁLOGO (O que é dito) */
-  .dialogue-node {
-    margin-top: 0 !important;
-    margin-bottom: 1.5em !important;
-    
-    /* Coluna Central Estreita */
-    margin-left: 25% !important;
-    margin-right: 25% !important;
-    width: 50% !important; /* O diálogo ocupa apenas metade da largura */
-    text-align: left !important;
-  }
-
-  /* CABEÇALHOS (Page Numbers) */
-  .story-page-header, .page-number-slot {
-    font-weight: bold !important;
-    text-align: right !important;
-    margin-bottom: 2em !important;
-    border-bottom: none !important;
-    color: #000 !important;
-  }
-
-  /* Limpeza Final */
-  .has-focus { border-color: transparent !important; }
-}
-
-/* Remove setinhas padrão do input number */
+/* Fix para inputs numéricos */
 input[type=number]::-webkit-inner-spin-button, 
 input[type=number]::-webkit-outer-spin-button { 
   -webkit-appearance: none; 
   margin: 0; 
 }
 input[type=number] {
-  -moz-appearance: textfield; /* Firefox */
+  -moz-appearance: textfield;
 }
 
+/* --- UTILITÁRIOS (Aqui estava o erro: faltava o @) --- */
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  /* --- SCROLLBAR CUSTOMIZADA (PREMIUM) --- */
+  /* Estilo Firefox */
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #3f3f46 transparent;
+  }
+
+  /* Estilo Webkit (Chrome, Edge, Safari) */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 14px; /* Área de clique generosa */
+    height: 14px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #3f3f46; /* Cor da barra (Zinc-700) */
+    border: 5px solid transparent; /* Cria o espaço transparente ao redor */
+    background-clip: content-box;  /* A mágica: pinta só o miolo */
+    border-radius: 9999px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: #52525b; /* Mais claro no hover */
+    border: 4px solid transparent; /* Fica um pouco mais grosso no hover */
+  }
+}
