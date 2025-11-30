@@ -101,6 +101,7 @@ export function EditorToolbar({
     exportPdf({
       title,
       seriesTitle,
+      chapterNumber,
       editorContent: editor.getJSON(),
       theme,
     });

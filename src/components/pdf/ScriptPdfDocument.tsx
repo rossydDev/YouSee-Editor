@@ -16,6 +16,7 @@ interface TiptapNode {
 export interface ScriptPdfProps {
   title: string;
   seriesTitle?: string;
+  chapterNumber?: string; // <--- NOVO CAMPO
   editorContent: any;
   theme?: 'standard' | 'dark';
 }
@@ -31,6 +32,7 @@ const getText = (node: TiptapNode): string => {
 export const ScriptPdfDocument: React.FC<ScriptPdfProps> = ({ 
   title, 
   seriesTitle, 
+  chapterNumber,
   editorContent,
   theme = 'standard'
 }) => {
@@ -49,34 +51,37 @@ export const ScriptPdfDocument: React.FC<ScriptPdfProps> = ({
 
   return (
     <Document title={title} author="YouSee Writer">
-      {/* CAPA */}
-      {/* CORREÇÃO: Trocamos 'undefined' por '{}' em todas as condicionais */}
+      {/* CAPA (TITLE PAGE) */}
       <Page size="A4" style={[styles.page, isDark ? styles.pageDark : {}]}>
         <View style={styles.titlePage}>
+          
+          {/* SÉRIE */}
           {seriesTitle && (
             <Text style={{ 
               fontSize: 16, 
-              marginBottom: 10, 
+              marginBottom: 5, 
               textTransform: 'uppercase', 
               color: isDark ? '#a1a1aa' : '#000' 
             }}>
               {seriesTitle}
             </Text>
           )}
+
+          {/* CAPÍTULO (NOVO) */}
+          {chapterNumber && (
+            <Text style={{ 
+              fontSize: 14, 
+              marginBottom: 10, 
+              fontWeight: 'bold', 
+              color: isDark ? '#f97316' : '#000' // Laranja no Dark Mode para destaque
+            }}>
+              #{chapterNumber}
+            </Text>
+          )}
           
+          {/* TÍTULO DO EPISÓDIO */}
           <Text style={[styles.titleMain, isDark ? styles.titleMainDark : {}]}>
             {title}
-          </Text>
-          
-          <Text style={[styles.titleCredits, isDark ? { color: '#e4e4e7' } : {}]}>
-            Written by
-          </Text>
-          <Text style={[
-            styles.titleCredits, 
-            { fontWeight: 'bold' }, 
-            isDark ? { color: '#fff' } : {}
-          ]}>
-            [AUTOR]
           </Text>
           
           <Text style={{ 
@@ -85,7 +90,7 @@ export const ScriptPdfDocument: React.FC<ScriptPdfProps> = ({
             fontSize: 10, 
             color: isDark ? '#52525b' : '#666' 
           }}>
-            Gerado via YouSee {isDark ? '(Dark Mode)' : ''}
+            Desenvolvido com o YouSee {isDark ? '(Dark Mode)' : ''}
           </Text>
         </View>
       </Page>
@@ -96,10 +101,18 @@ export const ScriptPdfDocument: React.FC<ScriptPdfProps> = ({
         const pageContent = pageNode.content || [];
         const totalPanelsInPage = pageContent.filter(n => n.type === 'panel').length;
 
+        // Construção do Cabeçalho: "SÉRIE #1 - PAGE 1 - PANELS: 5"
+        const headerParts = [];
+        if (seriesTitle) headerParts.push(seriesTitle.toUpperCase());
+        if (chapterNumber) headerParts.push(`#${chapterNumber}`);
+        headerParts.push(`PAGE ${pageIndex + 1}`);
+        if (totalPanelsInPage > 0) headerParts.push(`- PANELS: ${totalPanelsInPage}`);
+
         return (
           <Page key={pageIndex} size="A4" style={[styles.page, isDark ? styles.pageDark : {}]}>
+            {/* Cabeçalho Rico com Informações de Contexto */}
             <Text style={[styles.pageHeader, isDark ? styles.pageHeaderDark : {}]}>
-              PAGE {pageIndex + 1} {totalPanelsInPage > 0 ? `- PANELS: ${totalPanelsInPage}` : ''}
+              {headerParts.join(' ')}
             </Text>
 
             <View>
@@ -139,7 +152,6 @@ export const ScriptPdfDocument: React.FC<ScriptPdfProps> = ({
                   
                   case 'sfx':
                     return (
-                      // CORREÇÃO: Usando estilo inline para o container do SFX para evitar erro de tipagem
                       <View key={nodeIndex} style={{ flexDirection: 'row', marginTop: 10, marginBottom: 10 }}>
                         <Text style={[styles.sfxLabel, isDark ? styles.sfxLabelDark : {}]}>SFX:</Text>
                         <Text style={{ fontStyle: 'italic' }}>{text.toUpperCase()}</Text>

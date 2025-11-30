@@ -6,14 +6,21 @@ import { saveAs } from 'file-saver';
 interface UseScriptExportProps {
   title: string;
   seriesTitle?: string;
+  chapterNumber?: string; // <--- NOVO
   editorContent: any;
-  theme: 'standard' | 'dark'; // Obrigatório agora
+  theme: 'standard' | 'dark';
 }
 
 export function useScriptExport() {
   const [isExporting, setIsExporting] = useState(false);
 
-  const exportPdf = useCallback(async ({ title, seriesTitle, editorContent, theme }: UseScriptExportProps) => {
+  const exportPdf = useCallback(async ({ 
+    title, 
+    seriesTitle, 
+    chapterNumber, 
+    editorContent, 
+    theme 
+  }: UseScriptExportProps) => {
     try {
       setIsExporting(true);
       
@@ -21,11 +28,12 @@ export function useScriptExport() {
         throw new Error("Conteúdo vazio.");
       }
 
-      // Passamos o theme para o Documento
+      // Renderiza o documento com os novos metadados
       const doc = (
         <ScriptPdfDocument 
           title={title} 
           seriesTitle={seriesTitle} 
+          chapterNumber={chapterNumber}
           editorContent={editorContent}
           theme={theme} 
         />
@@ -33,10 +41,15 @@ export function useScriptExport() {
 
       const blob = await pdf(doc).toBlob();
       
-      // Sufixo no nome do arquivo se for Dark
-      const suffix = theme === 'dark' ? '-dark' : '';
+      // --- Lógica de Nomenclatura de Arquivo ---
+      // Sanitiza strings para evitar caracteres inválidos em nomes de arquivo
+      const safeSeries = seriesTitle ? seriesTitle.replace(/[^a-z0-9]/gi, '') + '-' : '';
+      const safeChapter = chapterNumber ? chapterNumber.padStart(2, '0') + '-' : ''; // Adiciona zero à esquerda (01, 02...)
       const safeTitle = title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-      const filename = `${seriesTitle ? seriesTitle + '-' : ''}${safeTitle}${suffix}.pdf`;
+      const suffix = theme === 'dark' ? '-dark' : '';
+      
+      // Ex: Series-01-titulo.pdf
+      const filename = `${safeSeries}${safeChapter}${safeTitle}${suffix}.pdf`;
 
       saveAs(blob, filename);
 
