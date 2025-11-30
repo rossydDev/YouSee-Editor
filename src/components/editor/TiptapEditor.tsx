@@ -136,7 +136,7 @@ export function TipTapEditor({ scriptId }: TipTapEditorProps) {
             flex-1 h-full overflow-y-auto cursor-default bg-zinc-950
             transition-all duration-300
             ${isLoaded ? 'opacity-100' : 'opacity-0'}
-            xl:pl-64
+            px-50 xl:pl-72
           `}
           onClick={(e) => {
             if (e.target === e.currentTarget) editor?.commands.blur();

@@ -94,6 +94,9 @@
 
 /* --- MODO DE IMPRESSÃO: PADRÃO HOLLYWOOD (CLEAN) --- */
 /* --- MODO DE IMPRESSÃO: ESTILO WRITERDUET --- */
+/* ===========================
+   1) RESETAR TUDO NO PRINT
+   ===========================*/
 @media print {
   /* 1. RESET E PAPEL */
   @page {
