@@ -20,7 +20,6 @@ import { EditorLayout } from "@/components/layout/EditorLayout";
 import { usePagination } from "@/hooks/usePagination";
 import { useAutoSave } from "@/hooks/useAutoSave";
 import { useEffect, useState } from "react";
-import { ScriptBehavior } from "./extensions/ScriptBehavior";
 
 const DEFAULT_CONTENT = `
    <div data-type="page">
