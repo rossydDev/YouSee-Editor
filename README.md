@@ -1,55 +1,92 @@
-# 👁️ YouSee - HQ Script Editor
+👁️ YouSee - HQ Script Editor
 
-> **Status:** ✅ MVP 1.0 (Local-First)
+Status: ✅ MVP 1.0 (Local-First)
 
-O **YouSee** é um editor de roteiros de histórias em quadrinhos profissional, Open Source, focado em alta performance e uma experiência visual imersiva "Dark Mode".
+O YouSee é um editor de roteiros de histórias em quadrinhos profissional, Open Source, focado em alta performance e uma experiência visual imersiva "Dark Mode".
 
-Desenvolvido para resolver o problema de formatação de roteiros de HQ, oferecendo uma interface limpa que separa a **Página da História** da **Folha de Impressão**.
+Desenvolvido para resolver o problema de formatação de roteiros de HQ, oferecendo uma interface limpa que separa a Página da História da Folha de Impressão.
 
-![YouSee Editor Screenshot](https://via.placeholder.com/800x400?text=Screenshot+do+Editor+Aqui)
-*(Sugestão: Substitua este link por um print real do seu editor depois!)*
+(Em breve: Screenshot real do editor)
 
-## ✨ Funcionalidades Principais
+✨ Funcionalidades Principais
 
-- **📚 Organização de Séries:**
-  - Dashboard visual para gerenciar múltiplos roteiros.
-  - Agrupamento automático por **Série** e ordenação por **Capítulo**.
-  - Identidade visual "Dark & Amber" consistente.
-- **🧠 Autocomplete Inteligente:**
-  - Sugestão automática de nomes de **Personagens** recorrentes (`@` ou digitação).
-  - Autocomplete para nomes de **Séries** já existentes.
-- **📝 Formatação de Roteiro:** Blocos semânticos para Cenas, Personagens, Diálogos e SFX.
-- **📄 Engine de Paginação Automática:**
-  - Detecta quando o conteúdo excede o tamanho A4 e cria novas páginas.
-  - Suporte a "Páginas de História" vs "Folhas de Impressão".
-- **💾 Persistência Local-First:**
-  - Salvamento automático no `localStorage`.
-- **🖨️ Exportação PDF Profissional:**
-  - Formatação **Standard Industry** (Courier 12pt, Margens de Cinema).
-  - Remove a interface escura para impressão limpa em preto e branco.
+📚 Organização de Séries:
 
-## 🛠️ Stack Tecnológica
+Dashboard visual para gerenciar múltiplos roteiros.
 
-- **Core:** Next.js 14 (App Router)
-- **Linguagem:** TypeScript
-- **Estilo:** Tailwind CSS v4
-- **Editor Engine:** Tiptap (Headless ProseMirror)
-- **State Management:** React Hooks + LocalStorage
-- **Icons:** Lucide React
+Agrupamento automático por Série e ordenação por Capítulo.
 
-## 🚀 Como Rodar Localmente
+Identidade visual "Dark & Amber" consistente.
 
-1. Clone o repositório:
-```bash
+🧠 Autocomplete Inteligente:
+
+Sugestão automática de nomes de Personagens recorrentes (@ ou digitação).
+
+Autocomplete para nomes de Séries já existentes.
+
+📝 Formatação de Roteiro (Comic Script):
+
+Blocos semânticos para Painéis (Cenas), Personagens, Diálogos e SFX.
+
+Numeração inteligente: PAGE X - PANELS: Y.
+
+📄 Engine de Paginação Automática:
+
+Detecta quando o conteúdo excede o tamanho A4 e cria novas páginas.
+
+WYSIWYG: O que você vê na tela é exatamente o que sai no PDF.
+
+💾 Persistência Local-First:
+
+Salvamento automático e robusto no localStorage.
+
+Privacidade total: seus dados nunca saem do seu navegador.
+
+🖨️ Exportação PDF Profissional (Engine Própria):
+
+Modo Padrão (Industry Standard): Fonte Courier Prime 12pt, margens de cinema, fundo branco (pronto para imprimir).
+
+Modo YouSee (Dark Mode): PDF otimizado para leitura digital em tablets/celulares, com fundo escuro e alto contraste.
+
+Geração Client-Side rápida sem depender de API externa.
+
+🛠️ Stack Tecnológica
+
+Core: Next.js 14 (App Router)
+
+Linguagem: TypeScript (Strict Mode)
+
+Estilo: Tailwind CSS v4 (CSS Variables)
+
+Editor Engine: Tiptap (Headless ProseMirror)
+
+PDF Engine: @react-pdf/renderer
+
+State Management: React Hooks + LocalStorage
+
+Icons: Lucide React
+
+🚀 Como Rodar Localmente
+
+Clone o repositório:
+
 git clone [https://github.com/rossydDev/YouSee-Editor.git](https://github.com/rossydDev/YouSee-Editor.git)
 
-## 🚀 Como Rodar
 
-```bash
-# Clone o repositório
-git clone https://github.com/rossydDev/YouSee-Editor.git
-# Instale as dependências
+Instale as dependências:
+
 npm install
 
-# Rode o servidor de desenvolvimento
+
+Rode o servidor de desenvolvimento:
+
 npm run dev
+
+
+Abra http://localhost:3000 no seu navegador.
+
+🤝 Contribuição
+
+Contribuições são bem-vindas! Sinta-se à vontade para abrir Issues ou enviar Pull Requests.
+
+Desenvolvido com 🧡 e café.
