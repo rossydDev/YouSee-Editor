@@ -29,7 +29,7 @@ export const Panel = Node.create({
     return [
       'panel-block', 
       mergeAttributes(HTMLAttributes, {
-        class: 'block bg-zinc-800 border-2 border-transparent rounded-md p-4 mb-4 text-gray-100 font-bold uppercase transition-all duration-200',
+        class: 'block bg-zinc-800 border-2 border-transparent rounded-md p-4 mt-8 mb-2 text-gray-100 font-bold uppercase transition-all duration-200',
       }), 
       0 
     ]

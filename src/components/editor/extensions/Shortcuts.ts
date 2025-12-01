@@ -55,7 +55,37 @@ export const ScreenplayShortcuts = Extension.create({
           console.log("⬆️ Voltando para página anterior...")
           return commands.focus(pagePos - 2)
         }
+      },
+      'Mod-Shift-Enter': () => {
+        console.log("📄 Criando nova página via atalho...");
+        
+        const { state, chain } = this.editor;
+        
+        // Cria a estrutura padrão de uma nova página
+        // 1. Header (Obrigatório para página nova)
+        // 2. Painel (Geralmente começa com cena nova)
+        // 3. Ação (Cursor vai pra cá)
+        
+        // Nota: Dependendo do seu schema, você pode precisar ajustar os types
+        const content = [
+            { type: 'storyPageHeader' },
+            { type: 'panel', content: [{ type: 'text', text: ' ' }] },
+            { type: 'paragraph' }
+        ];
+
+        return this.editor.chain()
+            .focus()
+            // Insere a página no final do documento ou após a seleção atual?
+            // Padrão de editores: Insere APÓS o bloco atual, quebrando o fluxo
+            // Mas para simplificar a V1, vamos inserir no final do documento para evitar quebrar cenas no meio
+            .insertContentAt(state.doc.content.size, { 
+                type: 'page', 
+                content: content 
+            })
+            .scrollIntoView()
+            .run();
       }
     }
   },
+  
 })

@@ -14,7 +14,7 @@ export const Dialogue = Node.create({
       "div",
       mergeAttributes(HTMLAttributes, {
         class:
-          "dialogue-node mb-4 ml-[20%] mr-[20%] text-gray-200 leading-relaxed text-justify", // Texto claro e recuado
+          "dialogue-node mb-6 ml-[20%] mr-[20%] text-gray-200 leading-relaxed text-justify", // Texto claro e recuado
       }),
       0,
     ];

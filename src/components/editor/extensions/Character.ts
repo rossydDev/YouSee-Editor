@@ -13,7 +13,7 @@ export const Character = Node.create({
     return [
       'div',
       mergeAttributes(HTMLAttributes, {
-        class: 'character-node mt-6 mb-0 ml-[40%] text-orange-500 font-bold uppercase tracking-widest',
+        class: 'character-node mt-8 mb-0 ml-[40%] text-orange-500 font-bold uppercase tracking-widest',
       }),
       0,
     ]
