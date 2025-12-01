@@ -16,7 +16,7 @@ interface TiptapNode {
 export interface ScriptPdfProps {
   title: string;
   seriesTitle?: string;
-  chapterNumber?: string; // <--- NOVO CAMPO
+  chapterNumber?: string;
   editorContent: any;
   theme?: 'standard' | 'dark';
 }
@@ -38,123 +38,130 @@ export const ScriptPdfDocument: React.FC<ScriptPdfProps> = ({
 }) => {
   if (!editorContent || !editorContent.content) {
     return (
-      <Document>
-        <Page size="A4" style={styles.page}>
-          <Text>Erro: Conteúdo não encontrado.</Text>
-        </Page>
-      </Document>
+      <Document><Page size="A4" style={styles.page}><Text>Erro: Conteúdo vazio.</Text></Page></Document>
     );
   }
 
   const isDark = theme === 'dark';
+  // Filtra apenas os nós de página
   const pages = editorContent.content.filter((node: TiptapNode) => node.type === 'page') || [];
+
+  // Contador lógico para número da página do roteiro (ex: Page 1, Page 1 Cont...)
+  let logicalPageCounter = 0;
 
   return (
     <Document title={title} author="YouSee Writer">
       {/* CAPA (TITLE PAGE) */}
       <Page size="A4" style={[styles.page, isDark ? styles.pageDark : {}]}>
         <View style={styles.titlePage}>
-          
-          {/* SÉRIE */}
           {seriesTitle && (
-            <Text style={{ 
-              fontSize: 16, 
-              marginBottom: 5, 
-              textTransform: 'uppercase', 
-              color: isDark ? '#a1a1aa' : '#000' 
-            }}>
+            <Text style={{ fontSize: 16, marginBottom: 5, textTransform: 'uppercase', color: isDark ? '#a1a1aa' : '#000' }}>
               {seriesTitle}
             </Text>
           )}
-
-          {/* CAPÍTULO (NOVO) */}
           {chapterNumber && (
-            <Text style={{ 
-              fontSize: 14, 
-              marginBottom: 10, 
-              fontWeight: 'bold', 
-              color: isDark ? '#f97316' : '#000' // Laranja no Dark Mode para destaque
-            }}>
+            <Text style={{ fontSize: 14, marginBottom: 10, fontWeight: 'bold', color: isDark ? '#f97316' : '#000' }}>
               #{chapterNumber}
             </Text>
           )}
-          
-          {/* TÍTULO DO EPISÓDIO */}
-          <Text style={[styles.titleMain, isDark ? styles.titleMainDark : {}]}>
-            {title}
-          </Text>
-          
-          <Text style={{ 
-            position: 'absolute', 
-            bottom: 50, 
-            fontSize: 10, 
-            color: isDark ? '#52525b' : '#666' 
-          }}>
+          <Text style={[styles.titleMain, isDark ? styles.titleMainDark : {}]}>{title}</Text>
+          <Text style={{ position: 'absolute', bottom: 50, fontSize: 10, color: isDark ? '#52525b' : '#666' }}>
             Desenvolvido com o YouSee {isDark ? '(Dark Mode)' : ''}
           </Text>
         </View>
       </Page>
 
-      {/* PÁGINAS DO ROTEIRO */}
+      {/* RENDERIZAÇÃO DAS PÁGINAS */}
       {pages.map((pageNode: TiptapNode, pageIndex: number) => {
-        let panelCount = 0;
         const pageContent = pageNode.content || [];
+        
+        // Lógica de numeração de página (Storyboard logic)
+        const hasStoryHeader = pageContent.some(n => n.type === 'storyPageHeader');
+        if (hasStoryHeader) logicalPageCounter++;
+
+        // --- CORREÇÃO DO CONTADOR DE PAINÉIS ---
+        // Reinicia a contagem a cada página física, igual ao seu CSS (counter-reset: panel-counter)
+        let panelCount = 0; 
+        
+        // Mas precisamos contar quantos painéis existem TOTAL nesta página para o cabeçalho
         const totalPanelsInPage = pageContent.filter(n => n.type === 'panel').length;
 
-        // Construção do Cabeçalho: "SÉRIE #1 - PAGE 1 - PANELS: 5"
+        // Construção do Cabeçalho
         const headerParts = [];
         if (seriesTitle) headerParts.push(seriesTitle.toUpperCase());
         if (chapterNumber) headerParts.push(`#${chapterNumber}`);
-        headerParts.push(`PAGE ${pageIndex + 1}`);
+        
+        const pageLabel = hasStoryHeader 
+            ? `PAGE ${logicalPageCounter}` 
+            : `PAGE ${logicalPageCounter} (CONT.)`;
+
+        headerParts.push(pageLabel);
         if (totalPanelsInPage > 0) headerParts.push(`- PANELS: ${totalPanelsInPage}`);
 
         return (
           <Page key={pageIndex} size="A4" style={[styles.page, isDark ? styles.pageDark : {}]}>
-            {/* Cabeçalho Rico com Informações de Contexto */}
-            <Text style={[styles.pageHeader, isDark ? styles.pageHeaderDark : {}]}>
-              {headerParts.join(' ')}
+            
+            {/* Header da Página */}
+            <Text style={hasStoryHeader ? [styles.pageHeader, isDark ? styles.pageHeaderDark : {}] : [styles.continuationHeader, isDark ? { color: '#a1a1aa' } : {}]}>
+               {headerParts.join(' ')}
             </Text>
 
             <View>
               {pageContent.map((node, nodeIndex) => {
-                const text = getText(node);
-                if (!text.trim() && node.type !== 'panel') return null;
+                // Pega o texto bruto
+                const rawText = getText(node);
+                const cleanText = rawText.trim();
 
-                switch (node.type) {
-                  case 'panel':
+                // Ignora headers na renderização do corpo
+                if (node.type === 'storyPageHeader') return null;
+                
+                // Se for um parágrafo vazio e não for painel, pula
+                if (!cleanText && node.type !== 'panel') return null;
+
+                // --- RENDERIZAÇÃO DO PAINEL (CORRIGIDO) ---
+                if (node.type === 'panel') {
                     panelCount++;
-                    const panelText = text.trim() ? ` - ${text.toUpperCase()}` : '';
+                    
+                    // Se o usuário digitou algo (ex: "FLASHBACK"), adiciona hífen.
+                    // Se não digitou nada, fica apenas "PANEL 1"
+                    const panelLabel = cleanText 
+                        ? `PANEL ${panelCount} - ${cleanText.toUpperCase()}`
+                        : `PANEL ${panelCount}`;
+
                     return (
                       <Text key={nodeIndex} style={[styles.panelHeader, isDark ? styles.panelHeaderDark : {}]}>
-                        PANEL {panelCount}{panelText}
+                        {panelLabel}
                       </Text>
                     );
+                }
 
+                // Renderização dos outros tipos
+                switch (node.type) {
                   case 'paragraph':
-                    return <Text key={nodeIndex} style={styles.description}>{text}</Text>;
+                    return <Text key={nodeIndex} style={styles.description}>{cleanText}</Text>;
 
                   case 'character':
                     return (
                       <View key={nodeIndex} style={styles.characterBlock} wrap={false}>
-                        <Text style={styles.characterName}>{text.toUpperCase()}</Text>
+                        <Text style={styles.characterName}>{cleanText.toUpperCase()}</Text>
                       </View>
                     );
 
                   case 'parenthetical':
                     return (
                       <Text key={nodeIndex} style={styles.parenthetical}>
-                        ({text.replace(/[()]/g, '')})
+                        ({cleanText.replace(/[()]/g, '')})
                       </Text>
                     );
 
                   case 'dialogue':
-                    return <Text key={nodeIndex} style={styles.dialogue}>{text}</Text>;
+                    return <Text key={nodeIndex} style={styles.dialogue}>{cleanText}</Text>;
                   
                   case 'sfx':
                     return (
                       <View key={nodeIndex} style={{ flexDirection: 'row', marginTop: 10, marginBottom: 10 }}>
                         <Text style={[styles.sfxLabel, isDark ? styles.sfxLabelDark : {}]}>SFX:</Text>
-                        <Text style={{ fontStyle: 'italic' }}>{text.toUpperCase()}</Text>
+                        <Text style={{ fontStyle: 'italic' }}>{cleanText.toUpperCase()}</Text>
                       </View>
                     );
 

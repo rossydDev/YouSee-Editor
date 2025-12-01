@@ -18,7 +18,6 @@ import { PaginationExtension } from "./extensions/PaginationExtension";
 import { EditorToolbar } from "./EditorToolbar";
 import { Sidebar } from "./Sidebar";
 import { EditorLayout } from "@/components/layout/EditorLayout";
-import { usePagination } from "@/hooks/usePagination";
 import { useAutoSave } from "@/hooks/useAutoSave";
 import { useEffect, useState } from "react";
 

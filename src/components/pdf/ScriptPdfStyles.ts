@@ -1,30 +1,35 @@
 import { StyleSheet } from '@react-pdf/renderer';
 
-// Cores do YouSee
 const COLORS = {
   white: '#ffffff',
   black: '#000000',
-  darkBg: '#09090b',      // zinc-950
-  darkText: '#e4e4e7',    // zinc-200
-  amber: '#f97316',       // orange-500
-  darkBorder: '#27272a',  // zinc-800
+  darkBg: '#09090b',      
+  darkText: '#e4e4e7',    
+  amber: '#f97316',       
+  darkBorder: '#27272a',  
 };
 
 export const styles = StyleSheet.create({
   // --- LAYOUT BASE ---
   page: {
-    paddingTop: 50,
-    paddingBottom: 50,
-    paddingLeft: 72,
+    // Margens A4 Padrão (Top/Bottom reduzidos levemente para caber o header)
+    paddingTop: 40,
+    paddingBottom: 40,
+    paddingLeft: 72, // 1 polegada (padrão roteiro)
     paddingRight: 72,
     fontFamily: 'Courier Prime',
-    fontSize: 11,
-    lineHeight: 1.2,
-    backgroundColor: COLORS.white, // Padrão
-    color: COLORS.black,           // Padrão
+    
+    // AJUSTE CRÍTICO DE ESCALA:
+    // 12pt é o padrão da indústria (Courier 12).
+    // lineHeight 1.2 é muito apertado. 
+    // 1.5 aproxima-se mais do visual "double space" de roteiros e do Tailwind 'leading-relaxed'.
+    fontSize: 12, 
+    lineHeight: 1.5, 
+    
+    backgroundColor: COLORS.white, 
+    color: COLORS.black,           
   },
 
-  // --- VARIAÇÃO DARK MODE ---
   pageDark: {
     backgroundColor: COLORS.darkBg,
     color: COLORS.darkText,
@@ -34,63 +39,75 @@ export const styles = StyleSheet.create({
   pageHeader: {
     fontSize: 12,
     fontWeight: 'bold',
-    marginBottom: 20,
+    marginBottom: 20, // Espaço maior após o header
     textTransform: 'uppercase',
     borderBottomWidth: 1,
     borderBottomColor: '#000',
     paddingBottom: 5,
+    // Garante que o header fique fixo no topo
+    position: 'relative',
   },
+  
   pageHeaderDark: {
-    color: COLORS.amber, // Destaque no Dark Mode
+    color: COLORS.amber, 
     borderBottomColor: COLORS.amber,
+  },
+
+  // --- CONTINUAÇÃO ---
+  continuationHeader: {
+    fontSize: 10,
+    color: '#666',
+    marginBottom: 20,
+    fontStyle: 'italic',
+    textAlign: 'right', // Alinhado à direita para diferenciar
   },
 
   // --- PAINÉIS (Cenas) ---
   panelHeader: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: 'bold',
-    marginTop: 15,
-    marginBottom: 8,
+    marginTop: 20, // Mais respiro antes de um novo painel
+    marginBottom: 10,
     textTransform: 'uppercase',
     textDecoration: 'underline',
   },
   panelHeaderDark: {
-    color: COLORS.amber, // Sluglines em Ambar
+    color: COLORS.amber, 
     textDecorationColor: COLORS.amber,
   },
 
   // --- TEXTOS ---
   description: {
-    marginBottom: 10,
+    marginBottom: 12, // Espaçamento entre parágrafos de ação
     textAlign: 'left',
-    fontSize: 11,
+    fontSize: 12,
   },
   
   // Personagem
   characterBlock: {
-    marginTop: 10,
-    marginBottom: 8,
+    marginTop: 12,
+    marginBottom: 0, // O nome deve colar no diálogo
     keepWithNext: true, 
   },
   characterName: {
-    marginLeft: 180,
+    marginLeft: 180, // Margem padrão de roteiro (~2.5 polegadas)
     fontWeight: 'bold',
     textTransform: 'uppercase',
   },
 
   // Diálogo
   dialogue: {
-    marginLeft: 110,
+    marginLeft: 110, // Margem padrão de roteiro (~1.5 polegadas)
     marginRight: 110,
-    marginBottom: 10,
+    marginBottom: 12,
   },
 
   // Parenteses
   parenthetical: {
     marginLeft: 140,
-    fontSize: 10,
+    fontSize: 11, // Levemente menor
     fontStyle: 'italic',
-    marginBottom: 2,
+    marginBottom: 0,
   },
 
   // --- CAPA ---
@@ -111,10 +128,6 @@ export const styles = StyleSheet.create({
   titleMainDark: {
     color: COLORS.amber,
     textDecorationColor: COLORS.amber,
-  },
-  titleCredits: {
-    fontSize: 14,
-    marginBottom: 8,
   },
   
   // --- SFX ---
