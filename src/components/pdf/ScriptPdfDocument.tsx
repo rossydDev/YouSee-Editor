@@ -38,16 +38,23 @@ export const ScriptPdfDocument: React.FC<ScriptPdfProps> = ({
 }) => {
   if (!editorContent || !editorContent.content) {
     return (
-      <Document><Page size="A4" style={styles.page}><Text>Erro: Conteúdo vazio.</Text></Page></Document>
+      <Document>
+        <Page size="A4" style={styles.page}>
+          <Text>Erro: Conteúdo vazio.</Text>
+        </Page>
+      </Document>
     );
   }
 
   const isDark = theme === 'dark';
-  // Filtra apenas os nós de página
+  
+  // Filtra apenas os nós de página (ignorando metadados soltos se houver)
   const pages = editorContent.content.filter((node: TiptapNode) => node.type === 'page') || [];
 
-  // Contador lógico para número da página do roteiro (ex: Page 1, Page 1 Cont...)
+  // --- CONTADORES GLOBAIS ---
+  // Mantemos o estado da contagem fora do loop de renderização das páginas físicas
   let logicalPageCounter = 0;
+  let panelCounter = 0; 
 
   return (
     <Document title={title} author="YouSee Writer">
@@ -64,69 +71,76 @@ export const ScriptPdfDocument: React.FC<ScriptPdfProps> = ({
               #{chapterNumber}
             </Text>
           )}
-          <Text style={[styles.titleMain, isDark ? styles.titleMainDark : {}]}>{title}</Text>
+          <Text style={[styles.titleMain, isDark ? styles.titleMainDark : {}]}>
+            {title}
+          </Text>
           <Text style={{ position: 'absolute', bottom: 50, fontSize: 10, color: isDark ? '#52525b' : '#666' }}>
             Desenvolvido com o YouSee {isDark ? '(Dark Mode)' : ''}
           </Text>
         </View>
       </Page>
 
-      {/* RENDERIZAÇÃO DAS PÁGINAS */}
+      {/* RENDERIZAÇÃO DAS PÁGINAS DO ROTEIRO */}
       {pages.map((pageNode: TiptapNode, pageIndex: number) => {
         const pageContent = pageNode.content || [];
         
-        // Lógica de numeração de página (Storyboard logic)
+        // Verifica se é início de uma PÁGINA LÓGICA (Tem Header = Nova Cena/Página Roteirizada)
         const hasStoryHeader = pageContent.some(n => n.type === 'storyPageHeader');
-        if (hasStoryHeader) logicalPageCounter++;
-
-        // --- CORREÇÃO DO CONTADOR DE PAINÉIS ---
-        // Reinicia a contagem a cada página física, igual ao seu CSS (counter-reset: panel-counter)
-        let panelCount = 0; 
         
-        // Mas precisamos contar quantos painéis existem TOTAL nesta página para o cabeçalho
+        if (hasStoryHeader) {
+            logicalPageCounter++;
+            
+            // RESET DO CONTADOR DE PAINÉIS
+            // Reseta apenas quando começa uma nova página dramática (com header).
+            // Se for página de continuação (sem header), o contador segue de onde parou.
+            panelCounter = 0;
+        }
+
+        // Conta quantos painéis existem NESTA folha física (para o cabeçalho informativo)
         const totalPanelsInPage = pageContent.filter(n => n.type === 'panel').length;
 
-        // Construção do Cabeçalho
+        // Construção do Texto do Cabeçalho
         const headerParts = [];
         if (seriesTitle) headerParts.push(seriesTitle.toUpperCase());
         if (chapterNumber) headerParts.push(`#${chapterNumber}`);
         
+        // Define o rótulo da página (Ex: PAGE 1 vs PAGE 1 (CONT.))
         const pageLabel = hasStoryHeader 
             ? `PAGE ${logicalPageCounter}` 
             : `PAGE ${logicalPageCounter} (CONT.)`;
 
         headerParts.push(pageLabel);
+        
         if (totalPanelsInPage > 0) headerParts.push(`- PANELS: ${totalPanelsInPage}`);
 
         return (
           <Page key={pageIndex} size="A4" style={[styles.page, isDark ? styles.pageDark : {}]}>
             
-            {/* Header da Página */}
+            {/* Renderiza o Header no estilo correto (Destaque ou Discreto) */}
             <Text style={hasStoryHeader ? [styles.pageHeader, isDark ? styles.pageHeaderDark : {}] : [styles.continuationHeader, isDark ? { color: '#a1a1aa' } : {}]}>
                {headerParts.join(' ')}
             </Text>
 
             <View>
               {pageContent.map((node, nodeIndex) => {
-                // Pega o texto bruto
                 const rawText = getText(node);
                 const cleanText = rawText.trim();
 
-                // Ignora headers na renderização do corpo
+                // Ignora o node storyPageHeader na renderização do corpo (já usamos no topo)
                 if (node.type === 'storyPageHeader') return null;
                 
-                // Se for um parágrafo vazio e não for painel, pula
+                // Se for um parágrafo vazio e não for painel, pula (limpeza visual)
                 if (!cleanText && node.type !== 'panel') return null;
 
-                // --- RENDERIZAÇÃO DO PAINEL (CORRIGIDO) ---
+                // --- RENDERIZAÇÃO DO PAINEL (INTEGRAÇÃO COM EDITOR) ---
                 if (node.type === 'panel') {
-                    panelCount++;
+                    // Tenta ler o número oficial salvo no atributo (Sincronia com Editor)
+                    // Se não existir (legado), usa o contador local incremental.
+                    const displayNum = node.attrs?.number || (++panelCounter);
                     
-                    // Se o usuário digitou algo (ex: "FLASHBACK"), adiciona hífen.
-                    // Se não digitou nada, fica apenas "PANEL 1"
                     const panelLabel = cleanText 
-                        ? `PANEL ${panelCount} - ${cleanText.toUpperCase()}`
-                        : `PANEL ${panelCount}`;
+                        ? `PANEL ${displayNum} - ${cleanText.toUpperCase()}`
+                        : `PANEL ${displayNum}`;
 
                     return (
                       <Text key={nodeIndex} style={[styles.panelHeader, isDark ? styles.panelHeaderDark : {}]}>
@@ -135,7 +149,7 @@ export const ScriptPdfDocument: React.FC<ScriptPdfProps> = ({
                     );
                 }
 
-                // Renderização dos outros tipos
+                // Renderização dos outros tipos de nós
                 switch (node.type) {
                   case 'paragraph':
                     return <Text key={nodeIndex} style={styles.description}>{cleanText}</Text>;

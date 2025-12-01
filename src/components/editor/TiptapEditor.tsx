@@ -20,6 +20,7 @@ import { Sidebar } from "./Sidebar";
 import { EditorLayout } from "@/components/layout/EditorLayout";
 import { useAutoSave } from "@/hooks/useAutoSave";
 import { useEffect, useState } from "react";
+import { AutoNumberingExtension } from "./extensions/AutoNumberingExtension";
 
 const DEFAULT_CONTENT = `
    <div data-type="page">
@@ -50,6 +51,7 @@ export function TipTapEditor({ scriptId }: TipTapEditorProps) {
       Sfx,
       AutocompleteExtension,
       PaginationExtension,
+      AutoNumberingExtension,
       Focus.configure({ className: "has-focus", mode: "all" }),
     ],
     content: DEFAULT_CONTENT,

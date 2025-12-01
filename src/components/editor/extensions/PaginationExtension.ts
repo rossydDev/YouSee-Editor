@@ -15,7 +15,9 @@ export const PaginationExtension = Extension.create({
               const selectionChanged = !view.state.selection.eq(prevState.selection);
 
               if (docChanged || selectionChanged) {
+                // 1. Limpeza de páginas vazias
                 const cleaned = cleanupEmptyPages(view);
+                // 2. Verifica overflow
                 if (!cleaned) {
                    checkPageOverflow(view);
                 }
@@ -94,88 +96,102 @@ function checkPageOverflow(view: any) {
       if (!lastChild) return;
       if (lastChild.type.name === 'storyPageHeader') return;
 
-      // --- LOGICA DE GRUPO (NOVO) ---
-      // Verifica se devemos mover o par "Personagem + Diálogo"
+      // --- LOGICA DE GRUPO (Personagem + Diálogo) ---
       let nodesToMoveCount = 1;
       let nodesToMoveSize = lastChild.nodeSize;
 
-      // Se o último nó é Diálogo, checa se o penúltimo é Personagem
       if (lastChild.type.name === 'dialogue' && pageNode.childCount >= 2) {
           const secondLastChild = pageNode.child(pageNode.childCount - 2);
           if (secondLastChild && secondLastChild.type.name === 'character') {
-              // Bingo! Achamos um par. Vamos mover os dois.
-              console.log("Detectado par Personagem/Diálogo. Movendo juntos.");
               nodesToMoveCount = 2;
               nodesToMoveSize += secondLastChild.nodeSize;
           }
       }
 
-      // --- 1. CÁLCULOS ---
-      // O 'fromPos' agora recua baseado no tamanho total do grupo (1 ou 2 nós)
+      // --- 1. CÁLCULOS DO QUE SERÁ MOVIDO ---
       const fromPos = offset + pageNode.nodeSize - nodesToMoveSize - 1; 
       const toPos = fromPos + nodesToMoveSize;
 
-      // --- 2. PRESERVAÇÃO DE CURSOR ---
+      // Preservação de Cursor
       const isCursorInMovedNode = selection.from >= fromPos && selection.to <= toPos;
       const cursorOffset = selection.from - fromPos;
 
-      console.log(`🚨 Quebra na Pág ${index + 1}. Movendo ${nodesToMoveCount} nó(s).`);
-
-      // --- 3. PREPARAR CONTEÚDO PARA MOVER ---
-      // Slice recorta o pedaço do documento que queremos mover
       const sliceToMove = state.doc.slice(fromPos, toPos);
 
-      // --- 4. EXECUÇÃO ---
+      // --- 2. VERIFICAÇÃO DA PRÓXIMA PÁGINA ---
       const nextPageIndex = index + 1;
       let nextPagePos = -1;
+      let nextPageNode: any = null;
       
       if (nextPageIndex < doc.childCount) {
          doc.forEach((n: any, o: number, i: number) => {
-            if (i === nextPageIndex) nextPagePos = o;
+            if (i === nextPageIndex) {
+                nextPagePos = o;
+                nextPageNode = n;
+            }
          });
       }
 
+      console.log(`🚨 Quebra na Pág ${index + 1}. Movendo para destino...`);
+
       let insertPos = -1;
 
-      if (nextPagePos !== -1) {
-        // Mover para página existente
-        const nextPageNode = doc.child(nextPageIndex);
-        let insertOffset = 1; 
-        
-        if (nextPageNode.firstChild?.type.name === 'storyPageHeader') {
-            insertOffset += nextPageNode.firstChild.nodeSize;
-        }
+      // --- 3. DECISÃO: MESCLAR OU INSERIR? ---
+      
+      const doesNextPageHaveHeader = nextPageNode?.firstChild?.type.name === 'storyPageHeader';
 
+      // CENÁRIO A: Existe próxima página E ela é uma continuação (Sem Header)
+      // Ação: Podemos mesclar o conteúdo no topo dela
+      if (nextPagePos !== -1 && !doesNextPageHaveHeader) {
+        
         tr.delete(fromPos, toPos);
         
-        // Recalculo da posição de destino
+        // Como deletamos antes, a próxima página recuou
         const shiftedNextPagePos = nextPagePos - nodesToMoveSize;
-        insertPos = shiftedNextPagePos + insertOffset;
+        // Inserimos logo após a tag de abertura da página (pos + 1)
+        insertPos = shiftedNextPagePos + 1;
         
-        // Inserimos o slice (que pode ter 1 ou 2 nós)
         tr.insert(insertPos, sliceToMove.content);
-
-      } else {
-        // Criar nova página (Continuação)
-        tr.delete(fromPos, toPos);
+      
+      } 
+      // CENÁRIO B: Existe próxima página, MAS ela tem Header (É uma nova cena/página)
+      // OU não existe próxima página.
+      // Ação: Temos que CRIAR uma nova folha de continuação e INSERIR no meio.
+      else {
         
-        // Cria página com o conteúdo do slice
-        // sliceToMove.content já é um Fragment com os nós corretos
+        tr.delete(fromPos, toPos);
+
+        // Cria nova página de continuação (SEM HEADER)
         const newPage = state.schema.nodes.page.create(null, sliceToMove.content);
         
-        insertPos = tr.mapping.map(doc.content.size); 
-        tr.insert(insertPos, newPage);
-        insertPos = insertPos + 1; 
+        if (nextPagePos !== -1) {
+            // INSERÇÃO NO MEIO (Empurra a Page 2 para baixo)
+            // Calculamos a posição onde a Page 2 estaria agora (recuada pelo delete)
+            const targetInsertPos = nextPagePos - nodesToMoveSize;
+            
+            // Inserimos a NOVA página ANTES da Page 2
+            tr.insert(targetInsertPos, newPage);
+            
+            // O conteúdo foi inserido dentro da nova página. 
+            // insertPos para o cursor = inicio da nova pagina + 1
+            insertPos = targetInsertPos + 1;
+
+        } else {
+            // INSERÇÃO NO FINAL
+            const targetInsertPos = tr.mapping.map(doc.content.size);
+            tr.insert(targetInsertPos, newPage);
+            insertPos = targetInsertPos + 1;
+        }
       }
 
-      // --- 5. RESTAURAR CURSOR ---
+      // --- 4. RESTAURAR CURSOR ---
       if (isCursorInMovedNode && insertPos !== -1) {
         const newCursorPos = insertPos + cursorOffset;
         try {
             tr.setSelection(TextSelection.create(tr.doc, newCursorPos));
             tr.scrollIntoView();
         } catch (e) {
-            console.warn("Erro ao restaurar cursor", e);
+            console.warn("Erro cursor", e);
         }
       }
 
