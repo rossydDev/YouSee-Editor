@@ -23,6 +23,19 @@
 
   .page-node {
     @apply cursor-text shadow-xl pointer-events-auto relative; 
+    /* Mantemos o tamanho visual A4 */
+    min-height: 1123px; 
+    
+    /* Reduzimos o padding um pouco para dar espaço para as margens dos elementos */
+    padding-top: 50px; 
+    padding-bottom: 50px;
+    
+    /* IMPORTANTE: Isso impede que a margem-bottom do último elemento 
+       seja somada "para fora" do cálculo de altura */
+    overflow: hidden; 
+    
+    /* Garante que o padding conte dentro do height */
+    box-sizing: border-box;
   }
 
   /* --- 2. LÓGICA DE PÁGINAS --- */

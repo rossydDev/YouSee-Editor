@@ -12,6 +12,7 @@ import { ScreenplayDocument } from "./extensions/Document";
 import { Page } from "./extensions/Page";
 import { StoryPageHeader } from "./extensions/StoryPageHeader";
 import { AutocompleteExtension } from "./extensions/AutocompleteExtension";
+import { PaginationExtension } from "./extensions/PaginationExtension";
 
 // COMPONENTS & HOOKS
 import { EditorToolbar } from "./EditorToolbar";
@@ -49,6 +50,7 @@ export function TipTapEditor({ scriptId }: TipTapEditorProps) {
       ScreenplayShortcuts,
       Sfx,
       AutocompleteExtension,
+      PaginationExtension,
       Focus.configure({ className: "has-focus", mode: "all" }),
     ],
     content: DEFAULT_CONTENT,
@@ -69,8 +71,6 @@ export function TipTapEditor({ scriptId }: TipTapEditorProps) {
     existingSeries
   } = useAutoSave(editor, scriptId);
   
-  usePagination(editor);
-
   // 3. LISTENERS
   useEffect(() => {
     if (!editor) return;
