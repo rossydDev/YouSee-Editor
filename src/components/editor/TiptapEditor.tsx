@@ -143,6 +143,7 @@ export function TipTapEditor({ scriptId }: TipTapEditorProps) {
         className={`
           flex justify-center w-full py-12 pt-10 pb-[50vh]
           transition-opacity duration-500
+          px-4 md:px-0
           ${isLoaded ? "opacity-100" : "opacity-0"}
         `}
       >
