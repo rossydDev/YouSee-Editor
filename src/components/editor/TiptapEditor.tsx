@@ -1,26 +1,26 @@
 "use client";
 
-import { useEditor, EditorContent } from "@tiptap/react";
+import Focus from "@tiptap/extension-focus";
+import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import { Panel } from "./extensions/Panel";
+import { AutocompleteExtension } from "./extensions/AutocompleteExtension";
 import { Character } from "./extensions/Character";
 import { Dialogue } from "./extensions/Dialogue";
-import { ScreenplayShortcuts } from "./extensions/Shortcuts";
-import { Sfx } from "./extensions/Sfx";
-import Focus from "@tiptap/extension-focus";
 import { ScreenplayDocument } from "./extensions/Document";
 import { Page } from "./extensions/Page";
-import { StoryPageHeader } from "./extensions/StoryPageHeader";
-import { AutocompleteExtension } from "./extensions/AutocompleteExtension";
 import { PaginationExtension } from "./extensions/PaginationExtension";
+import { Panel } from "./extensions/Panel";
+import { Sfx } from "./extensions/Sfx";
+import { ScreenplayShortcuts } from "./extensions/Shortcuts";
+import { StoryPageHeader } from "./extensions/StoryPageHeader";
 
 // COMPONENTS & HOOKS
-import { EditorToolbar } from "./EditorToolbar";
-import { Sidebar } from "./Sidebar";
 import { EditorLayout } from "@/components/layout/EditorLayout";
 import { useAutoSave } from "@/hooks/useAutoSave";
 import { useEffect, useState } from "react";
+import { EditorToolbar } from "./EditorToolbar";
 import { AutoNumberingExtension } from "./extensions/AutoNumberingExtension";
+import { Sidebar } from "./Sidebar";
 
 const DEFAULT_CONTENT = `
    <div data-type="page">
@@ -35,7 +35,7 @@ interface TipTapEditorProps {
 export function TipTapEditor({ scriptId }: TipTapEditorProps) {
   // Estado UI
   // Começa fechado no mobile (padrão) e aberto no desktop (se quiser)
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true); 
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   // 1. EDITOR CONFIG
   const editor = useEditor({
@@ -58,26 +58,35 @@ export function TipTapEditor({ scriptId }: TipTapEditorProps) {
     immediatelyRender: false,
     editorProps: {
       attributes: { class: "outline-none" },
+
+      transformPastedText(text) {
+        return text
+          .replace(/(\w)-\r?\n(\w)/g, "$1$2")
+          .replace(/([^\n])\r?\n(?!\n)/g, "$1 ");
+      },
     },
   });
 
   // 2. HOOKS
-  const { 
-    isLoaded, 
-    saveContent, 
-    saveStatus, 
-    title, setTitle,
-    seriesTitle, setSeriesTitle,
-    chapterNumber, setChapterNumber,
-    existingSeries
+  const {
+    isLoaded,
+    saveContent,
+    saveStatus,
+    title,
+    setTitle,
+    seriesTitle,
+    setSeriesTitle,
+    chapterNumber,
+    setChapterNumber,
+    existingSeries,
   } = useAutoSave(editor, scriptId);
-  
+
   // 3. LISTENERS
   useEffect(() => {
     if (!editor) return;
-    
+
     // Auto-save manual trigger
-    editor.on('update', saveContent);
+    editor.on("update", saveContent);
 
     // Scroll Cinematográfico
     const handleScroll = () => {
@@ -85,15 +94,19 @@ export function TipTapEditor({ scriptId }: TipTapEditorProps) {
         const { from } = editor.state.selection;
         const dom = editor.view.domAtPos(from).node as HTMLElement;
         if (dom && dom.scrollIntoView) {
-          dom.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+          dom.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+            inline: "nearest",
+          });
         }
       });
     };
-    editor.on('transaction', handleScroll);
+    editor.on("transaction", handleScroll);
 
-    return () => { 
-      editor.off('update', saveContent);
-      editor.off('transaction', handleScroll);
+    return () => {
+      editor.off("update", saveContent);
+      editor.off("transaction", handleScroll);
     };
   }, [editor, saveContent]);
 
@@ -105,8 +118,8 @@ export function TipTapEditor({ scriptId }: TipTapEditorProps) {
       isSidebarOpen={isSidebarOpen}
       setIsSidebarOpen={setIsSidebarOpen}
       header={
-        <EditorToolbar 
-          editor={editor} 
+        <EditorToolbar
+          editor={editor}
           title={title}
           setTitle={setTitle}
           seriesTitle={seriesTitle}
@@ -115,25 +128,25 @@ export function TipTapEditor({ scriptId }: TipTapEditorProps) {
           setChapterNumber={setChapterNumber}
           existingSeries={existingSeries}
           saveStatus={saveStatus}
-          isSidebarOpen = {isSidebarOpen}
+          isSidebarOpen={isSidebarOpen}
           toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
         />
       }
       sidebar={
-        <Sidebar 
-          editor={editor} 
-          onCloseMobile={() => setIsSidebarOpen(false)} 
+        <Sidebar
+          editor={editor}
+          onCloseMobile={() => setIsSidebarOpen(false)}
         />
       }
     >
-      <div 
+      <div
         className={`
           flex justify-center w-full py-12 pt-10 pb-[50vh]
           transition-opacity duration-500
-          ${isLoaded ? 'opacity-100' : 'opacity-0'}
+          ${isLoaded ? "opacity-100" : "opacity-0"}
         `}
       >
-         <EditorContent editor={editor} />
+        <EditorContent editor={editor} />
       </div>
     </EditorLayout>
   );
