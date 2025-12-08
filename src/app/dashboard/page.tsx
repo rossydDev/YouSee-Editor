@@ -1,24 +1,24 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useState, useRef } from "react";
-import { getAllScripts, deleteScript, generateId, Script } from "@/lib/storage";
-import { exportBackup, importBackup } from "@/lib/backup"; // <--- Importe a lógica nova
+import { exportBackup, importBackup } from "@/lib/backup";
+import { deleteScript, generateId, getAllScripts, Script } from "@/lib/storage";
 import {
+  Clock,
+  Download,
+  FileText,
+  Layers,
   Plus,
   Trash2,
-  FileText,
-  Clock,
-  Clapperboard,
-  Layers,
-  Download,
   Upload,
 } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 
 export default function Dashboard() {
   const [scripts, setScripts] = useState<Script[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null); // Referência para o input invisível
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
   const loadScripts = () => {
@@ -48,7 +48,6 @@ export default function Dashboard() {
   };
 
   const handleImportClick = () => {
-    // Clica no input invisível
     fileInputRef.current?.click();
   };
 
@@ -59,18 +58,16 @@ export default function Dashboard() {
     try {
       const count = await importBackup(file);
       alert(`${count} roteiros importados com sucesso!`);
-      loadScripts(); // Atualiza a tela
+      loadScripts();
     } catch (error) {
       alert("Erro ao importar: Arquivo inválido.");
       console.error(error);
     }
 
-    // Limpa o input para permitir selecionar o mesmo arquivo de novo se precisar
     e.target.value = "";
   };
   // -------------------------
 
-  // Lógica de Agrupamento (Mantida igual)
   const seriesGroups = scripts.reduce((groups, script) => {
     const seriesName = script.seriesTitle?.trim();
     if (seriesName) {
@@ -92,12 +89,19 @@ export default function Dashboard() {
     <div className="min-h-screen bg-zinc-950 text-gray-200 p-8 pb-32">
       {/* Header */}
       <header className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center mb-16 gap-4">
-        <Link
-          href="/"
-          className="flex items-center gap-2 text-orange-500 font-bold text-2xl tracking-tighter hover:opacity-80 transition-opacity"
-        >
-          <Clapperboard className="w-8 h-8" />
-          <span>YouSee</span>
+        {/* LOGO ATUALIZADA */}
+        <Link href="/" className="flex items-center gap-3 group cursor-pointer">
+          <div className="relative w-8 h-8 shrink-0 transition-transform group-hover:scale-110 duration-300">
+            <Image
+              src="/logo.png"
+              alt="YouSee Logo"
+              fill
+              className="object-contain"
+            />
+          </div>
+          <span className="text-2xl font-bold bg-gradient-to-r from-orange-500 to-amber-600 bg-clip-text text-transparent tracking-tight">
+            YouSee
+          </span>
         </Link>
 
         <div className="flex items-center gap-3">
@@ -139,7 +143,6 @@ export default function Dashboard() {
         </div>
       </header>
 
-      {/* ... (O resto do Main e dos Cards continua idêntico ao seu código anterior) ... */}
       <main className="max-w-6xl mx-auto space-y-16">
         {scripts.length === 0 && (
           <div className="flex flex-col items-center justify-center py-32 border-2 border-dashed border-zinc-800 rounded-3xl bg-zinc-900/30">
@@ -223,7 +226,6 @@ export default function Dashboard() {
   );
 }
 
-// ... ScriptCard Component (Mantenha o que já existia) ...
 function ScriptCard({
   script,
   onDelete,
@@ -240,7 +242,6 @@ function ScriptCard({
     >
       <div className="flex justify-between items-start mb-4">
         {isSeriesItem ? (
-          // Badge de Capítulo para Séries
           <div className="flex flex-col">
             <span className="text-xs text-orange-500 font-bold uppercase tracking-wider mb-1">
               Capítulo
@@ -250,7 +251,6 @@ function ScriptCard({
             </span>
           </div>
         ) : (
-          // Ícone padrão para soltos
           <div className="p-3 bg-zinc-950 rounded-lg text-zinc-600 group-hover:text-orange-500 transition-colors">
             <FileText size={24} />
           </div>
