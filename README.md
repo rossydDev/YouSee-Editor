@@ -1,92 +1,81 @@
-👁️ YouSee - HQ Script Editor
+# 👁️ YouSee - HQ Script Editor
 
-Status: ✅ MVP 1.0 (Local-First)
+![Status](https://img.shields.io/badge/Status-MVP%201.0-success)
+![License](https://img.shields.io/badge/License-MIT-blue)
+![Stack](https://img.shields.io/badge/Stack-Next.js%2014%20%7C%20Tiptap-black)
 
-O YouSee é um editor de roteiros de histórias em quadrinhos profissional, Open Source, focado em alta performance e uma experiência visual imersiva "Dark Mode".
+**O YouSee é um editor de roteiros de histórias em quadrinhos profissional, Open Source, focado em alta performance e uma experiência visual imersiva "Dark Mode".**
 
 Desenvolvido para resolver o problema de formatação de roteiros de HQ, oferecendo uma interface limpa que separa a Página da História da Folha de Impressão.
 
-(Em breve: Screenshot real do editor)
+![YouSee Editor Screenshot](./public/screenshot.png)
+*(Substitua este caminho pela sua imagem real)*
 
-✨ Funcionalidades Principais
+---
 
-📚 Organização de Séries:
+## ✨ Funcionalidades Principais
 
-Dashboard visual para gerenciar múltiplos roteiros.
+### 📚 Organização de Séries
+- **Dashboard visual** para gerenciar múltiplos roteiros.
+- **Agrupamento automático** por Série e ordenação por Capítulo.
+- Identidade visual "Dark & Amber" consistente.
 
-Agrupamento automático por Série e ordenação por Capítulo.
+### 🧠 Autocomplete Inteligente
+- Sugestão automática de nomes de **Personagens recorrentes** (@ ou digitação).
+- Autocomplete para nomes de **Séries já existentes**.
 
-Identidade visual "Dark & Amber" consistente.
+### 📝 Formatação de Roteiro (Comic Script)
+- Blocos semânticos para **Painéis (Cenas), Personagens, Diálogos e SFX**.
+- Numeração inteligente: `PAGE X` - `PANELS: Y`.
 
-🧠 Autocomplete Inteligente:
+### 📄 Engine de Paginação Automática
+- Detecta quando o conteúdo excede o tamanho A4 e cria novas páginas automaticamente.
+- **WYSIWYG:** O que você vê na tela é exatamente o que sai no PDF.
 
-Sugestão automática de nomes de Personagens recorrentes (@ ou digitação).
+### 💾 Persistência Local-First
+- Salvamento automático e robusto no `localStorage`.
+- **Privacidade total:** seus dados nunca saem do seu navegador.
 
-Autocomplete para nomes de Séries já existentes.
+### 🖨️ Exportação PDF Profissional (Engine Própria)
+- **Modo Padrão (Industry Standard):** Fonte Courier Prime 12pt, margens de cinema, fundo branco (pronto para imprimir/enviar para editoras).
+- **Modo YouSee (Dark Mode):** PDF otimizado para leitura digital em tablets/celulares, com fundo escuro e alto contraste.
+- Geração *Client-Side* rápida sem depender de API externa.
 
-📝 Formatação de Roteiro (Comic Script):
+---
 
-Blocos semânticos para Painéis (Cenas), Personagens, Diálogos e SFX.
+## 🛠️ Stack Tecnológica
 
-Numeração inteligente: PAGE X - PANELS: Y.
+- **Core:** Next.js 14 (App Router)
+- **Linguagem:** TypeScript (Strict Mode)
+- **Estilo:** Tailwind CSS (com CSS Variables)
+- **Editor Engine:** Tiptap (Headless ProseMirror)
+- **PDF Engine:** @react-pdf/renderer
+- **State Management:** React Hooks + LocalStorage
+- **Icons:** Lucide React
 
-📄 Engine de Paginação Automática:
+---
 
-Detecta quando o conteúdo excede o tamanho A4 e cria novas páginas.
+## 🚀 Como Rodar Localmente
 
-WYSIWYG: O que você vê na tela é exatamente o que sai no PDF.
+1. **Clone o repositório:**
+   ```bash
+   git clone https://github.com/rossydDev/YouSee-Editor.git
+   ```
 
-💾 Persistência Local-First:
+2. **Instale as dependências:**
+   ```bash
+   npm run dev
+   ```
 
-Salvamento automático e robusto no localStorage.
+2. **Rode o servidor de desenvolvimento:**
+   ```bash
+   npm run dev
+   ```
 
-Privacidade total: seus dados nunca saem do seu navegador.
-
-🖨️ Exportação PDF Profissional (Engine Própria):
-
-Modo Padrão (Industry Standard): Fonte Courier Prime 12pt, margens de cinema, fundo branco (pronto para imprimir).
-
-Modo YouSee (Dark Mode): PDF otimizado para leitura digital em tablets/celulares, com fundo escuro e alto contraste.
-
-Geração Client-Side rápida sem depender de API externa.
-
-🛠️ Stack Tecnológica
-
-Core: Next.js 14 (App Router)
-
-Linguagem: TypeScript (Strict Mode)
-
-Estilo: Tailwind CSS v4 (CSS Variables)
-
-Editor Engine: Tiptap (Headless ProseMirror)
-
-PDF Engine: @react-pdf/renderer
-
-State Management: React Hooks + LocalStorage
-
-Icons: Lucide React
-
-🚀 Como Rodar Localmente
-
-Clone o repositório:
-
-git clone [https://github.com/rossydDev/YouSee-Editor.git](https://github.com/rossydDev/YouSee-Editor.git)
-
-
-Instale as dependências:
-
-npm install
-
-
-Rode o servidor de desenvolvimento:
-
-npm run dev
-
-
-Abra http://localhost:3000 no seu navegador.
+4. Abra http://localhost:3000 no seu navegador.
 
 🤝 Contribuição
 
-Contribuições são bem-vindas! Sinta-se à vontade para abrir Issues ou enviar Pull Requests.
+Contribuições são bem-vindas! Sinta-se à vontade para abrir Issues relatando bugs ou enviar Pull Requests com melhorias.
 
-Desenvolvido com 🧡 e café.
+<p align="center"> Desenvolvido com 🧡 e café. </p>
