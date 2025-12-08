@@ -46,6 +46,16 @@ export function EditorToolbar({
   const [, forceUpdate] = useState(0);
   const [showSeriesSuggestions, setShowSeriesSuggestions] = useState(false);
 
+  // DEBUG: Monitorando o estado em tempo real
+  console.log("🔍 TOOLBAR DEBUG:", {
+    inputAtual: seriesTitle,
+    seriesDisponiveis: existingSeries,
+    sugestoesVisiveis: showSeriesSuggestions,
+    filtradas: existingSeries.filter((s) =>
+      s.toLowerCase().includes((seriesTitle || "").toLowerCase())
+    ),
+  });
+
   useEffect(() => {
     if (!editor) return;
     const handleUpdate = () => forceUpdate((prev) => prev + 1);
@@ -66,19 +76,19 @@ export function EditorToolbar({
       ? "bg-orange-500/20 text-orange-500 border-orange-500"
       : "text-gray-400 hover:bg-zinc-800 hover:text-gray-200 border-transparent";
 
-  // Botões menores no mobile, normais no desktop
   const btnClass =
     "p-1.5 sm:p-2 rounded border transition-colors flex items-center gap-2 text-sm font-medium shrink-0";
 
-  const filteredSeries = existingSeries.filter(
-    (s) =>
-      s.toLowerCase().includes(seriesTitle.toLowerCase()) && s !== seriesTitle
+  const filteredSeries = existingSeries.filter((s) =>
+    s.toLowerCase().includes((seriesTitle || "").toLowerCase())
   );
 
   return (
     <div className="fixed top-0 left-0 right-0 z-50 h-14 bg-zinc-950 border-b border-zinc-800 flex items-center justify-between px-2 sm:px-4 shadow-md gap-2 select-none">
-      {/* 1. ESQUERDA: Menu & Título */}
-      <div className="flex items-center gap-2 flex-1 min-w-0 overflow-hidden">
+      {/* FIX CSS: Removi o 'overflow-hidden' daqui.
+         Troquei por apenas 'flex-1 min-w-0' para permitir que o Dropdown "vaze" para fora.
+      */}
+      <div className="flex items-center gap-2 flex-1 min-w-0">
         <button
           onClick={toggleSidebar}
           className={`p-2 rounded transition-colors shrink-0 ${
@@ -101,14 +111,14 @@ export function EditorToolbar({
 
         {/* Inputs Group */}
         <div className="flex items-center gap-2 relative min-w-0 flex-1">
-          {/* Série - Escondido no Mobile para ganhar espaço */}
-          <div className="relative hidden lg:block">
+          {/* Série - Container relativo para ancorar o menu absoluto */}
+          <div className="relative hidden lg:block group">
             <input
               type="text"
               value={seriesTitle}
               onChange={(e) => {
                 setSeriesTitle(e.target.value);
-                setShowSeriesSuggestions(true);
+                if (!showSeriesSuggestions) setShowSeriesSuggestions(true);
               }}
               onFocus={() => setShowSeriesSuggestions(true)}
               onBlur={() =>
@@ -117,16 +127,20 @@ export function EditorToolbar({
               className="bg-transparent text-zinc-400 text-xs sm:text-sm focus:outline-none focus:bg-zinc-900 rounded px-2 py-1 w-20 sm:w-28 transition-colors border border-transparent focus:border-zinc-700 placeholder-zinc-600 text-right truncate"
               placeholder="Série"
             />
+
+            {/* MENU SUSPENSO */}
             {showSeriesSuggestions && filteredSeries.length > 0 && (
-              <ul className="absolute top-full left-0 w-48 bg-zinc-900 border border-zinc-700 rounded-md shadow-xl mt-1 z-[70] overflow-hidden">
+              <ul className="absolute top-full left-0 w-48 bg-zinc-900 border border-zinc-700 rounded-md shadow-xl mt-1 z-[9999] overflow-hidden max-h-60 overflow-y-auto">
                 {filteredSeries.map((serie) => (
                   <li
                     key={serie}
-                    onMouseDown={() => {
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      console.log("Clicou na série:", serie); // Log do clique
                       setSeriesTitle(serie);
                       setShowSeriesSuggestions(false);
                     }}
-                    className="px-3 py-2 text-sm text-zinc-300 hover:bg-orange-600 hover:text-white cursor-pointer"
+                    className="px-3 py-2 text-sm text-zinc-300 hover:bg-orange-600 hover:text-white cursor-pointer transition-colors text-left"
                   >
                     {serie}
                   </li>
@@ -137,7 +151,7 @@ export function EditorToolbar({
 
           <span className="text-zinc-600 font-mono hidden lg:inline">#</span>
 
-          {/* Capítulo - Escondido no Mobile */}
+          {/* Capítulo */}
           <input
             type="number"
             value={chapterNumber}
@@ -148,7 +162,7 @@ export function EditorToolbar({
 
           <span className="text-zinc-600 hidden lg:inline">|</span>
 
-          {/* Título - Sempre visível, mas flexível */}
+          {/* Título - Continua com truncate para não quebrar layout se for longo */}
           <input
             type="text"
             value={title}
@@ -159,9 +173,8 @@ export function EditorToolbar({
         </div>
       </div>
 
-      {/* 2. CENTRO: Ferramentas (Scrollable no mobile) */}
+      {/* 2. CENTRO: Ferramentas */}
       <div className="flex items-center gap-1 overflow-x-auto no-scrollbar px-2 shrink-0 max-w-[45vw] md:max-w-none mask-linear-fade">
-        {/* FORMATTING GROUP (NOVO) */}
         <button
           onClick={() => editor.chain().focus().toggleBold().run()}
           className={`${btnClass} ${isActive("bold")}`}
@@ -179,10 +192,8 @@ export function EditorToolbar({
 
         <div className="w-px h-5 bg-zinc-800 mx-1 shrink-0" />
 
-        {/* SCRIPT ELEMENTS */}
         <button
           onClick={() => {
-            // ... (Lógica de Nova Página mantida)
             const { doc } = editor.state;
             const endPos = doc.content.size;
             const newPageContent = [
@@ -201,7 +212,7 @@ export function EditorToolbar({
               .run();
           }}
           className={`${btnClass} ${isActive("storyPageHeader")}`}
-          title="Nova Página (Ctrl+Shift+Enter)" // DICA VISUAL
+          title="Nova Página (Ctrl+Shift+Enter)"
         >
           <Bookmark size={18} />
         </button>
