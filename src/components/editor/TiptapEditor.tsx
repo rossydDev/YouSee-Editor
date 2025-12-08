@@ -22,9 +22,12 @@ import { EditorToolbar } from "./EditorToolbar";
 import { AutoNumberingExtension } from "./extensions/AutoNumberingExtension";
 import { Sidebar } from "./Sidebar";
 
+// --- CORREÇÃO 3: Estrutura Inicial (Page 1, Panel 1, Parágrafo) ---
 const DEFAULT_CONTENT = `
    <div data-type="page">
        <story-page-header></story-page-header>
+       <panel-block></panel-block>
+       <p></p>
    </div>
 `;
 
@@ -33,9 +36,8 @@ interface TipTapEditorProps {
 }
 
 export function TipTapEditor({ scriptId }: TipTapEditorProps) {
-  // Estado UI
-  // Começa fechado no mobile (padrão) e aberto no desktop (se quiser)
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  // --- CORREÇÃO 2: Sidebar fechada por padrão ---
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // 1. EDITOR CONFIG
   const editor = useEditor({
@@ -59,10 +61,16 @@ export function TipTapEditor({ scriptId }: TipTapEditorProps) {
     editorProps: {
       attributes: { class: "outline-none" },
 
+      // --- CORREÇÃO 1: Bug de Colagem (Pasting Issue) ---
       transformPastedText(text) {
-        return text
-          .replace(/(\w)-\r?\n(\w)/g, "$1$2")
-          .replace(/([^\n])\r?\n(?!\n)/g, "$1 ");
+        // 1. Preserva quebras de parágrafo reais (\n\n)
+        let cleaned = text.replace(/(\r?\n\r?\n)/g, "[PARAGRAPH_BREAK]");
+
+        // 2. Remove todas as quebras de linha simples (PDF) e hífens, substituindo por espaço
+        cleaned = cleaned.replace(/[\r\n-]/g, " ");
+
+        // 3. Restaura as quebras de parágrafo reais para formar novos blocos
+        return cleaned.replace(/\[PARAGRAPH_BREAK]/g, "\n\n");
       },
     },
   });
