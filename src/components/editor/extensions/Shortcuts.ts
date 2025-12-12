@@ -5,15 +5,38 @@ export const ScreenplayShortcuts = Extension.create({
 
   addKeyboardShortcuts() {
     return {
-      // 1. TAB (Autocomplete de Personagem) - Mantido
+      // 1. TAB (Inteligente)
       Tab: () => {
-        if (this.editor.isActive("paragraph")) {
-          return this.editor.chain().setNode("character").focus().run();
+        const { state, commands } = this.editor;
+        const { $from } = state.selection;
+        const parent = $from.parent;
+
+        // Regra 1: Só funciona se estiver num parágrafo (Ação)
+        if (parent.type.name !== "paragraph") return false;
+
+        const isEmpty = parent.textContent.trim().length === 0;
+
+        // CENÁRIO A: Parágrafo Vazio -> Transforma o bloco atual
+        // Útil para quando você dá Enter e decide que agora vai ser uma fala
+        if (isEmpty) {
+          return commands.setNode("character");
         }
-        return false;
+
+        // CENÁRIO B: Parágrafo com Texto -> Cria Character em baixo
+        // Útil para fluxo rápido de escrita: Ação -> Tab -> Personagem
+        return (
+          this.editor
+            .chain()
+            // Insere o Character LOGO APÓS o parágrafo atual ($from.after())
+            .insertContentAt($from.after(), { type: "character" })
+            // Move o cursor para dentro do novo Character (+1 entra no nó)
+            .setTextSelection($from.after() + 1)
+            .scrollIntoView()
+            .run()
+        );
       },
 
-      // 2. BACKSPACE (Gerenciamento de Páginas) - Mantido
+      // 2. BACKSPACE (Gerenciamento de Páginas) - Mantido igual
       Backspace: () => {
         const { state, commands } = this.editor;
         const { selection } = state;
@@ -31,11 +54,11 @@ export const ScreenplayShortcuts = Extension.create({
         if (!isAtStartOfPage) return false;
 
         const cleanText = pageNode.textContent.replace(/PAGE \d+/, "").trim();
-        const isEmpty = cleanText.length === 0;
+        const isEmptyPage = cleanText.length === 0;
 
         if (pagePos <= 1) return false;
 
-        if (isEmpty) {
+        if (isEmptyPage) {
           console.log("🗑️ Deletando página vazia...");
           return commands.deleteRange({
             from: pagePos - 1,
@@ -47,18 +70,15 @@ export const ScreenplayShortcuts = Extension.create({
         }
       },
 
-      // 3. CTRL + SHIFT + ENTER (Nova Página Forçada) - Mantido
+      // 3. CTRL + SHIFT + ENTER (Nova Página Forçada) - Mantido igual
       "Mod-Shift-Enter": () => {
         console.log("📄 Criando nova página via atalho...");
-
         const { state } = this.editor;
-
         const content = [
           { type: "storyPageHeader" },
           { type: "panel", content: [{ type: "text", text: " " }] },
           { type: "paragraph" },
         ];
-
         return this.editor
           .chain()
           .focus()
@@ -70,35 +90,25 @@ export const ScreenplayShortcuts = Extension.create({
           .run();
       },
 
-      // 4. CTRL + ENTER (Novo Painel) - CORRIGIDO
+      // 4. CTRL + ENTER (Novo Painel Inteligente) - Mantido igual
       "Mod-Enter": () => {
         console.log("🎬 Novo Painel Inteligente...");
-
         const { state, commands } = this.editor;
         const { $from } = state.selection;
         const parent = $from.parent;
 
-        // CENÁRIO A: O usuário está num parágrafo vazio.
-        // Ação: Transforma esse parágrafo em Painel (não cria duplicata).
         if (parent.content.size === 0 && parent.type.name !== "panel") {
           return commands.setNode("panel");
         }
 
-        // CENÁRIO B: O usuário está digitando num painel ou parágrafo com texto.
-        // Ação: Cria um novo painel ABAIXO do atual.
-        // Nota: Removemos o 'splitBlock' que causava o bug da página duplicada.
-        return (
-          this.editor
-            .chain()
-            .insertContent({
-              type: "panel",
-              content: [{ type: "text", text: " " }],
-            })
-            // Opcional: Se quiser que já venha um parágrafo de ação depois do painel, descomente abaixo:
-            // .insertContent({ type: 'paragraph' })
-            .scrollIntoView()
-            .run()
-        );
+        return this.editor
+          .chain()
+          .insertContent({
+            type: "panel",
+            content: [{ type: "text", text: " " }],
+          })
+          .scrollIntoView()
+          .run();
       },
     };
   },
