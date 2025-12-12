@@ -1,12 +1,15 @@
 {
   "name": "you-se",
-  "version": "0.1.0",
-  "private": true,
+  "version": "1.0",
+  "main": "dist-electron/main.js",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+
+    "compile:electron": "tsc -p tsconfig.electron.json",
+    "electron:dev": "concurrently -k \"cross-env BROWSER=none npm run dev\" \"npm run compile:electron && wait-on tcp:3000 && electron .\""
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.3.1",
@@ -31,9 +34,14 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "babel-plugin-react-compiler": "1.0.0",
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
+    "electron": "^39.2.7",
+    "electron-builder": "^26.0.12",
     "eslint": "^9",
     "eslint-config-next": "^16.0.7",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5.9.3",
+    "wait-on": "^9.0.3"
   }
 }

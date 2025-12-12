@@ -1,32 +1,52 @@
-import { getAllScripts, getScriptById, saveScript } from "@/lib/storage";
+import {
+  getAllScripts,
+  getScriptById,
+  saveScript,
+  Script,
+} from "@/lib/storage";
 import { Editor } from "@tiptap/react";
 import { useCallback, useEffect, useRef, useState } from "react";
+
+// Conteúdo padrão para injetar no Editor
+const DEFAULT_INITIAL_CONTENT = {
+  type: "doc",
+  content: [
+    {
+      type: "page",
+      content: [
+        { type: "storyPageHeader" },
+        { type: "panel", attrs: { number: 1 } },
+        { type: "paragraph" },
+      ],
+    },
+  ],
+};
+
+// Versão String para comparação (Detectar se o roteiro está virgem)
+const DEFAULT_INITIAL_JSON = JSON.stringify(DEFAULT_INITIAL_CONTENT);
 
 export function useAutoSave(editor: Editor | null, scriptId: string) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [saveStatus, setSaveStatus] = useState<"saved" | "saving">("saved");
 
-  // Estados visuais
-  const [title, setTitle] = useState("Sem Título");
+  const [title, setTitle] = useState("Carregando...");
   const [seriesTitle, setSeriesTitle] = useState("");
   const [chapterNumber, setChapterNumber] = useState<string>("");
   const [existingSeries, setExistingSeries] = useState<string[]>([]);
 
-  // Refs para manter os valores mais recentes acessíveis dentro do timer
-  // sem precisar recriar as funções (Performance 🚀)
   const valuesRef = useRef({ title, seriesTitle, chapterNumber });
 
-  // Atualiza as refs sempre que o estado muda
+  // Mantém as refs atualizadas para o callback de save
   useEffect(() => {
     valuesRef.current = { title, seriesTitle, chapterNumber };
   }, [title, seriesTitle, chapterNumber]);
 
   const initialLoadDone = useRef(false);
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
-  const isMounted = useRef(true); // Proteção contra memory leak
+  const isMounted = useRef(true);
 
-  // 0. Monitorar Mount/Unmount
+  // Monitorar Mount/Unmount para evitar updates em componente desmontado
   useEffect(() => {
     isMounted.current = true;
     return () => {
@@ -34,69 +54,163 @@ export function useAutoSave(editor: Editor | null, scriptId: string) {
     };
   }, []);
 
-  // 1. CARREGAR DADOS (Load)
+  // 1. CARREGAMENTO DO ROTEIRO
   useEffect(() => {
     if (!editor || !scriptId || scriptId === "undefined") return;
     if (initialLoadDone.current) return;
 
-    const script = getScriptById(scriptId);
-    if (script) {
-      setTitle(script.title || "Sem Título");
-      setSeriesTitle(script.seriesTitle || "");
-      setChapterNumber(script.chapterNumber?.toString() || "");
+    const loadData = async () => {
+      let script: Script | null = null;
+      let loadedContent: any = null;
 
-      // Sincroniza refs imediatamente após carregar
-      valuesRef.current = {
-        title: script.title || "Sem Título",
-        seriesTitle: script.seriesTitle || "",
-        chapterNumber: script.chapterNumber?.toString() || "",
-      };
-
-      if (script.content) {
-        // QueueMicrotask evita conflitos de renderização do Tiptap
-        queueMicrotask(() => {
+      try {
+        // A. DESKTOP (Leitura de Arquivo Físico)
+        if (
+          typeof window !== "undefined" &&
+          window.electron?.isDesktop &&
+          (scriptId.includes("/") || scriptId.includes("\\"))
+        ) {
           try {
-            if (!editor.isDestroyed) {
-              editor.commands.setContent(script.content);
-              // Move cursor para o final para evitar sustos
-              editor.commands.focus("end");
+            const fileContent = await window.electron.readFile(scriptId);
+            if (fileContent) {
+              script = JSON.parse(fileContent);
             }
           } catch (e) {
-            console.error("Erro ao renderizar conteúdo:", e);
+            // Se der erro ao ler (arquivo não existe ainda), tratamos como novo
+            console.log("Arquivo novo ou não encontrado, iniciando vazio.");
           }
-        });
+        }
+        // B. WEB (LocalStorage)
+        else {
+          script = getScriptById(scriptId);
+        }
+
+        // Se encontrou dados salvos
+        if (script) {
+          setTitle(script.title || "Sem Título");
+          setSeriesTitle(script.seriesTitle || "");
+          setChapterNumber(script.chapterNumber?.toString() || "");
+
+          // Verificação de segurança para o conteúdo
+          const contentAny = script.content as any;
+          if (
+            contentAny &&
+            contentAny.content &&
+            Array.isArray(contentAny.content) &&
+            contentAny.content.length > 0
+          ) {
+            loadedContent = script.content;
+          } else {
+            loadedContent = DEFAULT_INITIAL_CONTENT;
+          }
+
+          valuesRef.current = {
+            title: script.title || "Sem Título",
+            seriesTitle: script.seriesTitle || "",
+            chapterNumber: script.chapterNumber?.toString() || "",
+          };
+        } else {
+          // Arquivo Novo
+          setTitle("Novo Roteiro");
+          loadedContent = DEFAULT_INITIAL_CONTENT;
+        }
+
+        // Injeta no Tiptap
+        if (loadedContent) {
+          queueMicrotask(() => {
+            if (!editor.isDestroyed) {
+              editor.commands.setContent(loadedContent);
+              editor.commands.focus("end");
+            }
+          });
+        }
+      } catch (error) {
+        console.error("Erro ao carregar roteiro:", error);
+      } finally {
+        setIsLoaded(true);
+        initialLoadDone.current = true;
       }
-    }
+    };
 
-    // Carregar lista de séries para o autocomplete
-    const allScripts = getAllScripts();
-    const uniqueSeries = Array.from(
-      new Set(
-        allScripts
-          .map((s) => s.seriesTitle)
-          .filter((s): s is string => !!s && s.trim() !== "")
-      )
-    ).sort();
-
-    setExistingSeries(uniqueSeries);
-    setIsLoaded(true);
-    initialLoadDone.current = true;
+    loadData();
   }, [editor, scriptId]);
 
-  // 2. FUNÇÃO DE SALVAR (Estável)
-  // Não depende mais de 'title' ou 'seriesTitle' no array de dependências
+  // 2. CARREGAR SUGESTÕES DE SÉRIE (Correção: Roda apenas uma vez ao carregar)
+  useEffect(() => {
+    const fetchSeriesSuggestions = async () => {
+      let allSeries: string[] = [];
+
+      if (typeof window !== "undefined" && window.electron?.isDesktop) {
+        const workspacePath = localStorage.getItem("yousee_workspace_path");
+        if (workspacePath) {
+          try {
+            const files = await window.electron.readWorkspace(workspacePath);
+            allSeries = files
+              .map((f: any) => f.seriesTitle)
+              .filter(
+                (s: any) => s && typeof s === "string" && s.trim() !== ""
+              );
+          } catch (e) {
+            console.error("Erro ao ler sugestões:", e);
+          }
+        }
+      } else {
+        const scripts = getAllScripts();
+        allSeries = scripts
+          .map((s) => s.seriesTitle)
+          .filter((s): s is string => !!s && s.trim() !== "");
+      }
+
+      const uniqueSeries = Array.from(new Set(allSeries)).sort();
+      setExistingSeries(uniqueSeries);
+    };
+
+    if (isLoaded) {
+      fetchSeriesSuggestions();
+    }
+    // IMPORTANTE: Removemos 'saveStatus' daqui para evitar loop infinito
+  }, [isLoaded]);
+
+  // 3. FUNÇÃO DE SALVAR (COM LÓGICA GHOST FILE)
   const executeSave = useCallback(() => {
     if (!editor || editor.isDestroyed) return;
+    if (!initialLoadDone.current) return;
 
     try {
       const json = editor.getJSON();
-      const currentValues = valuesRef.current; // Pega valores da Ref (sempre atuais)
-
+      const currentValues = valuesRef.current;
       const chapNum = currentValues.chapterNumber
         ? parseInt(currentValues.chapterNumber)
         : null;
 
-      console.log("💾 AutoSave: Salvando...");
+      // --- LÓGICA DE ARQUIVO FANTASMA ---
+      // Verifica se o usuário alterou algo do padrão
+      const isDefaultTitle =
+        currentValues.title === "Novo Roteiro" ||
+        currentValues.title === "Sem Título" ||
+        currentValues.title.trim() === "";
+
+      const isDefaultSeries =
+        !currentValues.seriesTitle || currentValues.seriesTitle.trim() === "";
+      const isDefaultChapter = !currentValues.chapterNumber;
+
+      // Compara conteúdo atual com o padrão (ignorando formatação de espaços do JSON)
+      const currentContentString = JSON.stringify(json);
+      const isDefaultContent = currentContentString === DEFAULT_INITIAL_JSON;
+
+      // Se tudo for padrão, NÃO cria o arquivo no disco ainda.
+      if (
+        isDefaultTitle &&
+        isDefaultSeries &&
+        isDefaultChapter &&
+        isDefaultContent
+      ) {
+        // console.log("👻 Fantasma: Ignorando salvamento de arquivo vazio.");
+        setSaveStatus("saved");
+        return;
+      }
+      // -----------------------------------
+
       saveScript(
         scriptId,
         json,
@@ -105,55 +219,44 @@ export function useAutoSave(editor: Editor | null, scriptId: string) {
         chapNum
       );
 
-      // Só atualiza estado se o componente ainda estiver na tela
       if (isMounted.current) {
         setLastSaved(new Date());
         setSaveStatus("saved");
       }
     } catch (error) {
-      console.error("Erro crítico ao salvar:", error);
+      console.error("Erro ao salvar:", error);
     }
   }, [editor, scriptId]);
 
-  // 3. O GATILHO (Debounce)
+  // 4. TRIGGER (Debounce de 2 segundos)
   const triggerSave = useCallback(() => {
     if (!initialLoadDone.current) return;
-
     if (isMounted.current) setSaveStatus("saving");
 
-    if (debounceTimer.current) {
-      clearTimeout(debounceTimer.current);
-    }
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
 
-    // Espera 2 segundos de inatividade para salvar
     debounceTimer.current = setTimeout(() => {
       executeSave();
     }, 2000);
   }, [executeSave]);
 
-  // 4. CONECTAR AO EDITOR (Listener)
+  // Listeners do Editor
   useEffect(() => {
     if (!editor) return;
-
     editor.on("update", triggerSave);
-
     return () => {
       editor.off("update", triggerSave);
-
-      // Salva imediatamente ao sair (Cleanup seguro)
       if (debounceTimer.current) {
         clearTimeout(debounceTimer.current);
-        // Chama o save direto, mas verifica se o editor ainda existe
-        if (!editor.isDestroyed) {
-          console.log("💾 Salvamento de emergência (Unmount)");
+        // Opcional: Salvar ao desmontar se não for fantasma (mas o executeSave já trata isso)
+        if (!editor.isDestroyed && initialLoadDone.current) {
           executeSave();
         }
       }
     };
   }, [editor, triggerSave, executeSave]);
 
-  // 5. GATILHO DE METADADOS
-  // Dispara o timer quando muda título, série ou capítulo
+  // Listeners de Metadados (Título, Série, etc)
   useEffect(() => {
     if (!isLoaded) return;
     triggerSave();

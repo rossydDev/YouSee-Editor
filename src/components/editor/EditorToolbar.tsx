@@ -2,9 +2,11 @@ import { Editor } from "@tiptap/react";
 import {
   Bold,
   Bookmark,
+  CheckCircle2,
   ChevronLeft,
   Clapperboard,
   Italic,
+  Loader2,
   Menu,
   MessageSquare,
   Music,
@@ -46,16 +48,6 @@ export function EditorToolbar({
   const [, forceUpdate] = useState(0);
   const [showSeriesSuggestions, setShowSeriesSuggestions] = useState(false);
 
-  // DEBUG: Monitorando o estado em tempo real
-  console.log("🔍 TOOLBAR DEBUG:", {
-    inputAtual: seriesTitle,
-    seriesDisponiveis: existingSeries,
-    sugestoesVisiveis: showSeriesSuggestions,
-    filtradas: existingSeries.filter((s) =>
-      s.toLowerCase().includes((seriesTitle || "").toLowerCase())
-    ),
-  });
-
   useEffect(() => {
     if (!editor) return;
     const handleUpdate = () => forceUpdate((prev) => prev + 1);
@@ -85,9 +77,7 @@ export function EditorToolbar({
 
   return (
     <div className="fixed top-0 left-0 right-0 z-50 h-14 bg-zinc-950 border-b border-zinc-800 flex items-center justify-between px-2 sm:px-4 shadow-md gap-2 select-none">
-      {/* FIX CSS: Removi o 'overflow-hidden' daqui.
-         Troquei por apenas 'flex-1 min-w-0' para permitir que o Dropdown "vaze" para fora.
-      */}
+      {/* 1. ESQUERDA: Menu e Inputs */}
       <div className="flex items-center gap-2 flex-1 min-w-0">
         <button
           onClick={toggleSidebar}
@@ -111,8 +101,7 @@ export function EditorToolbar({
 
         {/* Inputs Group */}
         <div className="flex items-center gap-2 relative min-w-0 flex-1">
-          {/* Série - Container relativo para ancorar o menu absoluto */}
-          <div className="relative hidden lg:block group">
+          <div className="relative hidden sm:block group">
             <input
               type="text"
               value={seriesTitle}
@@ -128,7 +117,6 @@ export function EditorToolbar({
               placeholder="Série"
             />
 
-            {/* MENU SUSPENSO */}
             {showSeriesSuggestions && filteredSeries.length > 0 && (
               <ul className="absolute top-full left-0 w-48 bg-zinc-900 border border-zinc-700 rounded-md shadow-xl mt-1 z-[9999] overflow-hidden max-h-60 overflow-y-auto">
                 {filteredSeries.map((serie) => (
@@ -136,7 +124,6 @@ export function EditorToolbar({
                     key={serie}
                     onMouseDown={(e) => {
                       e.preventDefault();
-                      console.log("Clicou na série:", serie); // Log do clique
                       setSeriesTitle(serie);
                       setShowSeriesSuggestions(false);
                     }}
@@ -151,18 +138,16 @@ export function EditorToolbar({
 
           <span className="text-zinc-600 font-mono hidden lg:inline">#</span>
 
-          {/* Capítulo */}
           <input
             type="number"
             value={chapterNumber}
             onChange={(e) => setChapterNumber(e.target.value)}
-            className="hidden lg:block bg-transparent text-orange-500 font-mono font-bold text-xs sm:text-sm focus:outline-none focus:bg-zinc-900 rounded px-1 py-1 w-10 sm:w-14 transition-colors border border-transparent focus:border-zinc-700 placeholder-zinc-700 text-center"
+            className="hidden sm:block bg-transparent text-orange-500 font-mono font-bold text-xs sm:text-sm focus:outline-none focus:bg-zinc-900 rounded px-1 py-1 w-10 sm:w-14 transition-colors border border-transparent focus:border-zinc-700 placeholder-zinc-700 text-center"
             placeholder="#"
           />
 
           <span className="text-zinc-600 hidden lg:inline">|</span>
 
-          {/* Título - Continua com truncate para não quebrar layout se for longo */}
           <input
             type="text"
             value={title}
@@ -173,8 +158,8 @@ export function EditorToolbar({
         </div>
       </div>
 
-      {/* 2. CENTRO: Ferramentas */}
-      <div className="flex items-center gap-1 overflow-x-auto no-scrollbar px-2 shrink-0 max-w-[45vw] md:max-w-none mask-linear-fade">
+      {/* 2. CENTRO: Ferramentas (Toolbar) */}
+      <div className="hidden lg:flex items-center gap-1 overflow-x-auto no-scrollbar px-2 shrink-0 max-w-[45vw] md:max-w-none mask-linear-fade">
         <button
           onClick={() => editor.chain().focus().toggleBold().run()}
           className={`${btnClass} ${isActive("bold")}`}
@@ -256,14 +241,39 @@ export function EditorToolbar({
         </button>
       </div>
 
-      {/* 3. DIREITA: Exportação */}
-      <ExportMenu
-        editor={editor}
-        title={title}
-        seriesTitle={seriesTitle}
-        chapterNumber={chapterNumber}
-        saveStatus={saveStatus}
-      />
+      {/* 3. DIREITA: Status e Exportação */}
+      <div className="flex items-center gap-3">
+        {/* INDICADOR DE SAVE (NOVO) */}
+        <div className="flex items-center gap-1.5 px-2">
+          {saveStatus === "saving" ? (
+            <>
+              <Loader2 size={12} className="animate-spin text-orange-500" />
+              <span className="text-xs text-zinc-500 hidden sm:inline">
+                Salvando...
+              </span>
+            </>
+          ) : (
+            <>
+              <CheckCircle2 size={14} className="text-orange-500" />
+
+              {/* Texto sutil para não cansar a vista */}
+              <span className="text-xs text-zinc-500 hidden sm:inline">
+                Salvo
+              </span>
+            </>
+          )}
+        </div>
+
+        <div className="w-px h-6 bg-zinc-800 hidden sm:block"></div>
+
+        <ExportMenu
+          editor={editor}
+          title={title}
+          seriesTitle={seriesTitle}
+          chapterNumber={chapterNumber}
+          saveStatus={saveStatus}
+        />
+      </div>
     </div>
   );
 }

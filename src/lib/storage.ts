@@ -1,84 +1,89 @@
-import { Content } from '@tiptap/react'
+import { Content } from "@tiptap/react";
 
-// Definição atualizada do que é um "Roteiro"
 export interface Script {
-  id: string
-  title: string
-  lastModified: number
-  content: Content
-  
-  // NOVOS CAMPOS PARA ESTRUTURA DE SÉRIE
-  seriesTitle: string | null // Ex: "Bardo e Capangas"
-  chapterNumber: number | null // Ex: 1
+  id: string;
+  title: string;
+  content: Content;
+  lastModified: number;
+  seriesTitle?: string; // Adicionado
+  chapterNumber?: string; // Adicionado
 }
 
-const STORAGE_KEY = 'yousee-scripts-v1'
+// Helper para gerar ID
+export const generateId = () => Math.random().toString(36).substr(2, 9);
 
-// --- FUNÇÕES DO BANCO DE DADOS ---
+// Função Principal de Salvar
+export const saveScript = async (
+  id: string,
+  content: Content,
+  title: string,
+  seriesTitle?: string,
+  chapterNumber?: number | null
+) => {
+  const scriptData = {
+    id,
+    title,
+    content,
+    seriesTitle: seriesTitle || "", // Garante que salva a série
+    chapterNumber: chapterNumber || "",
+    lastModified: Date.now(),
+  };
 
-export function getAllScripts(): Script[] {
-  if (typeof window === 'undefined') return []
-  const raw = localStorage.getItem(STORAGE_KEY)
-  if (!raw) return []
-  try {
-    return JSON.parse(raw) as Script[] // Adicionamos 'as Script[]' para tipagem mais segura
-  } catch (e) {
-    return []
-  }
-}
+  const jsonString = JSON.stringify(scriptData);
 
-export function getScriptById(id: string): Script | undefined {
-  const scripts = getAllScripts()
-  return scripts.find(s => s.id === id)
-}
-
-// 3. Salvar (Criar ou Atualizar) - Lógica atualizada para salvar os campos de série
-export function saveScript(
-  id: string, 
-  content: Content, 
-  title?: string,
-  seriesTitle?: string | null, // Recebe o título da série
-  chapterNumber?: number | null // Recebe o número do capítulo
-) {
-  const scripts = getAllScripts()
-  const now = Date.now()
-  const existingIndex = scripts.findIndex(s => s.id === id)
-
-  const defaultTitle = title || 'Sem Título'
-
-  if (existingIndex >= 0) {
-    // Atualizar existente
-    scripts[existingIndex] = {
-      ...scripts[existingIndex],
-      content,
-      lastModified: now,
-      title: defaultTitle,
-      // Atualiza os novos campos
-      seriesTitle: seriesTitle !== undefined ? seriesTitle : scripts[existingIndex].seriesTitle,
-      chapterNumber: chapterNumber !== undefined ? chapterNumber : scripts[existingIndex].chapterNumber,
+  // 1. MODO DESKTOP (Electron)
+  if (typeof window !== "undefined" && window.electron?.isDesktop) {
+    // Se o ID for um caminho de arquivo (C:\...), salva lá.
+    // Se for um ID aleatório, precisaria pedir pra salvar (mas o autosave lida com arquivos já criados)
+    if (id.includes("/") || id.includes("\\")) {
+      await window.electron.saveToPath(id, jsonString);
+    } else {
+      // Fallback: Se for desktop mas ID não for caminho, salva no localStorage provisoriamente
+      localStorage.setItem(`yousee_script_${id}`, jsonString);
     }
-  } else {
-    // Criar novo
-    const newScript: Script = {
-      id,
-      title: defaultTitle,
-      content,
-      lastModified: now,
-      // Define os novos campos
-      seriesTitle: seriesTitle || null,
-      chapterNumber: chapterNumber || null,
+  }
+  // 2. MODO WEB (LocalStorage)
+  else {
+    localStorage.setItem(`yousee_script_${id}`, jsonString);
+  }
+};
+
+export const getScriptById = (id: string): Script | null => {
+  if (typeof window === "undefined") return null;
+  const saved = localStorage.getItem(`yousee_script_${id}`);
+  return saved ? JSON.parse(saved) : null;
+};
+
+export const getAllScripts = (): Script[] => {
+  if (typeof window === "undefined") return [];
+  const scripts: Script[] = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key?.startsWith("yousee_script_")) {
+      const script = JSON.parse(localStorage.getItem(key)!);
+      scripts.push(script);
     }
-    scripts.push(newScript)
+  }
+  return scripts.sort((a, b) => b.lastModified - a.lastModified);
+};
+
+export const deleteScript = async (id: string) => {
+  // 1. Sempre tenta remover do LocalStorage (limpeza de cache/web)
+  if (typeof window !== "undefined") {
+    localStorage.removeItem(`yousee_script_${id}`);
   }
 
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(scripts))
-}
-
-export function deleteScript(id: string) {
-  const scripts = getAllScripts().filter(s => s.id !== id)
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(scripts))
-}
-
-export function generateId(): string {
-  return crypto.randomUUID()
-}
+  // 2. Se for Desktop e o ID for um caminho de arquivo, apaga do HD
+  if (
+    typeof window !== "undefined" &&
+    window.electron?.isDesktop &&
+    (id.includes("/") || id.includes("\\"))
+  ) {
+    try {
+      await window.electron.deleteFile(id);
+      console.log(`Arquivo deletado: ${id}`);
+    } catch (error) {
+      console.error("Falha ao deletar arquivo físico:", error);
+    }
+  }
+};
