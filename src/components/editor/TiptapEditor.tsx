@@ -21,6 +21,7 @@ import { StoryPageHeader } from "./extensions/StoryPageHeader";
 
 // COMPONENTS & HOOKS
 import { FileExplorer } from "@/components/desktop/FileExplorer";
+import { StartScreen } from "@/components/desktop/StartScreen";
 import { DesktopLayout } from "@/components/layout/DesktopLayout";
 import { useAutoSave } from "@/hooks/useAutoSave";
 import { Script, deleteScript, generateId } from "@/lib/storage";
@@ -42,37 +43,42 @@ interface TipTapEditorProps {
 export function TipTapEditor({ scriptId }: TipTapEditorProps) {
   const router = useRouter();
   const [workspaceFiles, setWorkspaceFiles] = useState<Script[]>([]);
+  const hasOpenScript = !!scriptId && scriptId !== "undefined";
 
   // 1. EDITOR CONFIG
-  const editor = useEditor({
-    extensions: [
-      StarterKit.configure({ document: false }),
-      ScreenplayDocument,
-      Page,
-      StoryPageHeader,
-      Panel,
-      Character,
-      Dialogue,
-      ScreenplayShortcuts,
-      Sfx,
-      AutocompleteExtension,
-      PaginationExtension,
-      AutoNumberingExtension,
-      Focus.configure({ className: "has-focus", mode: "all" }),
-    ],
-    content: DEFAULT_CONTENT,
-    immediatelyRender: false,
-    editorProps: {
-      attributes: { class: "outline-none" },
-      transformPastedText(text) {
-        let cleaned = text.replace(/(\r?\n\r?\n)/g, "[PARAGRAPH_BREAK]");
-        cleaned = cleaned.replace(/[\r\n-]/g, " ");
-        return cleaned.replace(/\[PARAGRAPH_BREAK]/g, "\n\n");
+  const editor = useEditor(
+    {
+      extensions: [
+        StarterKit.configure({ document: false }),
+        ScreenplayDocument,
+        Page,
+        StoryPageHeader,
+        Panel,
+        Character,
+        Dialogue,
+        ScreenplayShortcuts,
+        Sfx,
+        AutocompleteExtension,
+        PaginationExtension,
+        AutoNumberingExtension,
+        Focus.configure({ className: "has-focus", mode: "all" }),
+      ],
+      content: DEFAULT_CONTENT,
+      editable: hasOpenScript,
+      immediatelyRender: false,
+      editorProps: {
+        attributes: { class: "outline-none" },
+        transformPastedText(text) {
+          let cleaned = text.replace(/(\r?\n\r?\n)/g, "[PARAGRAPH_BREAK]");
+          cleaned = cleaned.replace(/[\r\n-]/g, " ");
+          return cleaned.replace(/\[PARAGRAPH_BREAK]/g, "\n\n");
+        },
       },
     },
-  });
+    [scriptId]
+  );
 
-  // 2. HOOKS (AutoSave)
+  // 2. HOOKS
   const {
     isLoaded,
     saveContent,
@@ -84,13 +90,11 @@ export function TipTapEditor({ scriptId }: TipTapEditorProps) {
     chapterNumber,
     setChapterNumber,
     existingSeries,
-  } = useAutoSave(editor, scriptId);
+  } = useAutoSave(editor, hasOpenScript ? scriptId : "");
 
-  // 3. GERENCIAMENTO DE ARQUIVOS (File System)
+  // 3. FILE SYSTEM
   const loadWorkspaceFiles = async () => {
-    // Se não tiver electron (ex: abriu no navegador sem querer), não faz nada ou carrega vazio
     if (typeof window === "undefined" || !window.electron) return;
-
     const path = localStorage.getItem("yousee_workspace_path");
     if (!path) return;
 
@@ -102,21 +106,16 @@ export function TipTapEditor({ scriptId }: TipTapEditorProps) {
     }
   };
 
-  // Carrega lista inicial
   useEffect(() => {
     loadWorkspaceFiles();
   }, []);
-
-  // Recarrega lista ao salvar (para atualizar títulos/capítulos na sidebar)
   useEffect(() => {
-    if (saveStatus === "saved") {
-      setTimeout(() => loadWorkspaceFiles(), 500);
-    }
+    if (saveStatus === "saved") setTimeout(() => loadWorkspaceFiles(), 500);
   }, [saveStatus]);
 
-  // --- AÇÕES DO EXPLORER ---
+  // --- ACTIONS ---
   const handleFileSelect = (fileId: string) => {
-    saveContent();
+    if (hasOpenScript) saveContent();
     router.push(`/editor/${encodeURIComponent(fileId)}`);
   };
 
@@ -128,6 +127,13 @@ export function TipTapEditor({ scriptId }: TipTapEditorProps) {
       const separator = path.includes("\\") ? "\\" : "/";
       const fullPath = `${path}${separator}${filename}`;
       router.push(`/editor/${encodeURIComponent(fullPath)}`);
+    } else {
+      // Se não tiver pasta, pede para selecionar primeiro
+      const newPath = await window.electron?.selectFolder();
+      if (newPath) {
+        localStorage.setItem("yousee_workspace_path", newPath);
+        loadWorkspaceFiles();
+      }
     }
   };
 
@@ -135,58 +141,106 @@ export function TipTapEditor({ scriptId }: TipTapEditorProps) {
     if (confirm("Tem certeza que deseja apagar este roteiro?")) {
       await deleteScript(fileId);
       await loadWorkspaceFiles();
-      if (fileId === scriptId) {
-        handleCreateNew(); // Se apagou o atual, vai para um novo
-      }
+      if (fileId === scriptId) router.push("/editor");
     }
   };
 
-  // 4. SCROLL CINEMATOGRÁFICO & LISTENERS
+  // --- IMPORTAÇÃO DE BACKUP ---
+  const handleImportBackup = async () => {
+    if (!window.electron) return;
+
+    const workspacePath = localStorage.getItem("yousee_workspace_path");
+    if (!workspacePath) {
+      alert("Selecione uma pasta de trabalho primeiro!");
+      return;
+    }
+
+    const result = await window.electron.openFile();
+    if (!result || !result.content) return;
+
+    try {
+      const data = JSON.parse(result.content);
+      const scriptsToImport = Array.isArray(data) ? data : [data];
+      let importedCount = 0;
+
+      for (const script of scriptsToImport) {
+        if (!script.content) continue;
+
+        // Gera nome de arquivo seguro
+        const safeTitle = (script.title || "Sem Titulo")
+          .replace(/[^a-z0-9]/gi, "_")
+          .toLowerCase();
+        const fileId =
+          script.id && script.id.length < 10
+            ? generateId()
+            : script.id || generateId();
+
+        const separator = workspacePath.includes("\\") ? "\\" : "/";
+        const filename = `${safeTitle}-${fileId.slice(0, 6)}.yousee`;
+        const fullPath = `${workspacePath}${separator}${filename}`;
+
+        const fileContent = {
+          ...script,
+          id: fullPath, // Atualiza ID para o caminho do arquivo
+          lastModified: Date.now(),
+        };
+
+        await window.electron.saveToWorkspace(
+          fullPath,
+          JSON.stringify(fileContent)
+        );
+        importedCount++;
+      }
+
+      alert(`${importedCount} roteiros importados com sucesso!`);
+      loadWorkspaceFiles(); // Atualiza a lista na hora
+    } catch (error) {
+      console.error("Erro ao importar:", error);
+      alert("Erro ao ler arquivo. Verifique se é um backup válido.");
+    }
+  };
+
+  // Listeners de Editor (Update Scroll, etc)
   useEffect(() => {
-    if (!editor) return;
-
-    // Auto-save manual trigger
+    if (!editor || !hasOpenScript) return;
     editor.on("update", saveContent);
-
-    // Scroll Suave ao digitar
-    const handleScroll = () => {
-      requestAnimationFrame(() => {
-        const { from } = editor.state.selection;
-        const dom = editor.view.domAtPos(from).node as HTMLElement;
-        if (dom && dom.scrollIntoView) {
-          dom.scrollIntoView({
-            behavior: "smooth",
-            block: "center",
-            inline: "nearest",
-          });
-        }
-      });
-    };
-    editor.on("transaction", handleScroll);
-
     return () => {
       editor.off("update", saveContent);
-      editor.off("transaction", handleScroll);
     };
-  }, [editor, saveContent]);
+  }, [editor, saveContent, hasOpenScript]);
 
-  if (!editor) return null;
+  // --- ATALHO DE TECLADO: CTRL + S (NOVO) ---
+  useEffect(() => {
+    if (!hasOpenScript) return; // Só ativa se estiver editando um roteiro
 
-  // 5. RENDERIZAÇÃO: LAYOUT DE ESTÚDIO (ÚNICO)
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Detecta Ctrl+S ou Command+S (Mac)
+      if ((e.ctrlKey || e.metaKey) && e.key === "s") {
+        e.preventDefault(); // Impede o navegador de tentar salvar a página HTML
+        saveContent(); // Força o save do roteiro imediatamente
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [hasOpenScript, saveContent]);
+
   return (
     <DesktopLayout
       header={
-        <EditorToolbar
-          editor={editor}
-          title={title}
-          setTitle={setTitle}
-          seriesTitle={seriesTitle}
-          setSeriesTitle={setSeriesTitle}
-          chapterNumber={chapterNumber}
-          setChapterNumber={setChapterNumber}
-          existingSeries={existingSeries}
-          saveStatus={saveStatus}
-        />
+        hasOpenScript && editor ? (
+          <EditorToolbar
+            editor={editor}
+            title={title}
+            setTitle={setTitle}
+            seriesTitle={seriesTitle}
+            setSeriesTitle={setSeriesTitle}
+            chapterNumber={chapterNumber}
+            setChapterNumber={setChapterNumber}
+            existingSeries={existingSeries}
+            saveStatus={saveStatus}
+          />
+        ) : null
       }
       sidebarLeft={
         <FileExplorer
@@ -197,17 +251,32 @@ export function TipTapEditor({ scriptId }: TipTapEditorProps) {
           onDeleteFile={handleDeleteFile}
         />
       }
-      sidebarRight={<Sidebar editor={editor} onCloseMobile={() => {}} />}
+      sidebarRight={
+        hasOpenScript && editor ? (
+          <Sidebar editor={editor} onCloseMobile={() => {}} />
+        ) : null
+      }
     >
-      <div
-        className={`
-            flex justify-center w-full py-12 pt-10 pb-[50vh] px-8
-            transition-opacity duration-500
-            ${isLoaded ? "opacity-100" : "opacity-0"}
-        `}
-      >
-        <EditorContent editor={editor} />
-      </div>
+      {hasOpenScript && editor ? (
+        <div
+          className={`flex justify-center w-full py-12 pt-10 pb-[50vh] px-8 transition-opacity duration-500 ${
+            isLoaded ? "opacity-100" : "opacity-0"
+          }`}
+        >
+          <EditorContent editor={editor} />
+        </div>
+      ) : (
+        /* START SCREEN COM IMPORTAÇÃO */
+        <StartScreen
+          onCreate={handleCreateNew}
+          onImport={handleImportBackup}
+          hasWorkspace={
+            workspaceFiles.length > 0 ||
+            (typeof window !== "undefined" &&
+              !!localStorage.getItem("yousee_workspace_path"))
+          }
+        />
+      )}
     </DesktopLayout>
   );
 }

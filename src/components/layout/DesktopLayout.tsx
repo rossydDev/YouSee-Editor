@@ -5,11 +5,12 @@ import {
   Minus,
   PanelLeft,
   PanelRight,
-  Settings, // <--- Ícone de Minimizar
+  Settings,
   Square,
   Users,
   X,
 } from "lucide-react";
+import { useRouter } from "next/navigation"; // <--- Importante para navegação
 import { ReactNode, useEffect, useState } from "react";
 
 interface DesktopLayoutProps {
@@ -25,6 +26,7 @@ export function DesktopLayout({
   sidebarLeft,
   sidebarRight,
 }: DesktopLayoutProps) {
+  const router = useRouter(); // <--- Hook de navegação
   const [showLeft, setShowLeft] = useState(true);
   const [showRight, setShowRight] = useState(false);
 
@@ -99,10 +101,10 @@ export function DesktopLayout({
       {/* --- ÁREA CENTRAL (PRINCIPAL) --- */}
       <main className="flex-1 flex flex-col min-w-0 relative h-full transition-all duration-300">
         {/* ========================================================= */}
-        {/* BARRA DE TÍTULO CUSTOMIZADA (Drag Region + Botões)        */}
+        {/* BARRA DE TÍTULO CUSTOMIZADA                               */}
         {/* ========================================================= */}
         <header className="h-9 bg-zinc-950 flex items-center justify-between px-3 border-b border-zinc-900 select-none app-region-drag shrink-0">
-          {/* Lado Esquerdo: Título e Botão Sidebar */}
+          {/* Lado Esquerdo: Botão Sidebar e BOTÃO HOME */}
           <div className="flex items-center gap-2 app-region-no-drag">
             {!showLeft && (
               <button
@@ -113,14 +115,23 @@ export function DesktopLayout({
                 <PanelLeft size={16} />
               </button>
             )}
-            {/* Título do App (Visível apenas se a sidebar estiver fechada para não duplicar) */}
-            <span
-              className={`text-xs font-medium ml-2 transition-colors ${
-                !showLeft ? "text-zinc-400" : "text-zinc-600"
-              }`}
+
+            {/* TÍTULO AGORA É UM BOTÃO DE VOLTAR PARA O INÍCIO */}
+            <button
+              onClick={() => router.push("/editor")}
+              className={`
+                text-xs font-bold ml-2 transition-colors flex items-center gap-2 px-2 py-1 rounded
+                hover:bg-zinc-800 cursor-pointer border border-transparent hover:border-zinc-800
+                ${
+                  !showLeft
+                    ? "text-zinc-400 hover:text-white"
+                    : "text-zinc-600 hover:text-zinc-300"
+                }
+              `}
+              title="Voltar para a Tela Inicial (Fechar Roteiro)"
             >
               YouSee Studio
-            </span>
+            </button>
           </div>
 
           {/* Lado Direito: Botões de Janela (Windows Controls) */}
