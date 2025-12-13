@@ -4,16 +4,19 @@ declare global {
   interface Window {
     electron?: {
       isDesktop: boolean;
-      saveFile: (
-        content: string
-      ) => Promise<{ success: boolean; filePath?: string }>;
-      openFile: () => Promise<{ content: string; filePath: string } | null>;
-      selectFolder: () => Promise<string | null>;
-      readWorkspace: (folderPath: string) => Promise<any[]>;
-      saveToWorkspace: (filePath: string, content: string) => Promise<boolean>;
-      saveToPath: (filePath: string, content: string) => Promise<boolean>;
-      readFile: (filePath: string) => Promise<string | null>;
-      deleteFile: (filePath: string) => Promise<boolean>;
+      // ... suas outras funções ...
+      saveFile: (content: string) => Promise<any>;
+      openFile: () => Promise<any>;
+      selectFolder: () => Promise<any>;
+      readWorkspace: (path: string) => Promise<any>;
+      saveToWorkspace: (path: string, content: string) => Promise<boolean>;
+      deleteFile: (path: string) => Promise<boolean>;
+      readFile: (path: string) => Promise<string | null>;
+
+      // Adicione estas 3 linhas:
+      minimize: () => void;
+      maximize: () => void;
+      close: () => void;
     };
   }
 }

@@ -1,29 +1,26 @@
 import { contextBridge, ipcRenderer } from "electron";
 
 contextBridge.exposeInMainWorld("electron", {
-  // Salvar/Abrir Arquivo Único (Mantemos por compatibilidade)
+  isDesktop: true,
+
+  // --- SISTEMA DE ARQUIVOS ---
   saveFile: (content: string) => ipcRenderer.invoke("dialog:saveFile", content),
   openFile: () => ipcRenderer.invoke("dialog:openFile"),
-
-  // --- NOVOS COMANDOS DE WORKSPACE ---
-  // 1. Abre janela para escolher a pasta
   selectFolder: () => ipcRenderer.invoke("dialog:selectFolder"),
 
-  // 2. Lê todos os arquivos .yousee da pasta
-  readWorkspace: (folderPath: string) =>
-    ipcRenderer.invoke("fs:readWorkspace", folderPath),
+  readWorkspace: (path: string) => ipcRenderer.invoke("fs:readWorkspace", path),
 
-  // 3. Salva direto no arquivo (sem abrir janela de diálogo)
-  saveToWorkspace: (filePath: string, content: string) =>
-    ipcRenderer.invoke("fs:saveToPath", { filePath, content }),
+  // MANTENHA AMBOS PARA COMPATIBILIDADE
+  saveToWorkspace: (path: string, content: string) =>
+    ipcRenderer.invoke("fs:saveToPath", { filePath: path, content }),
+  saveToPath: (path: string, content: string) =>
+    ipcRenderer.invoke("fs:saveToPath", { filePath: path, content }), // <--- LINHA NOVA (Alias)
 
-  saveToPath: (filePath: string, content: string) =>
-    ipcRenderer.invoke("fs:saveToPath", { filePath, content }),
+  deleteFile: (path: string) => ipcRenderer.invoke("fs:deleteFile", path),
+  readFile: (path: string) => ipcRenderer.invoke("fs:readFile", path),
 
-  readFile: (filePath: string) => ipcRenderer.invoke("fs:readFile", filePath),
-
-  deleteFile: (filePath: string) =>
-    ipcRenderer.invoke("fs:deleteFile", filePath),
-
-  isDesktop: true,
+  // --- CONTROLES DE JANELA ---
+  minimize: () => ipcRenderer.send("window-minimize"),
+  maximize: () => ipcRenderer.send("window-maximize"),
+  close: () => ipcRenderer.send("window-close"),
 });

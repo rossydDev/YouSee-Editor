@@ -2,9 +2,11 @@
 
 import {
   FileText,
+  Minus,
   PanelLeft,
   PanelRight,
-  Settings,
+  Settings, // <--- Ícone de Minimizar
+  Square,
   Users,
   X,
 } from "lucide-react";
@@ -24,17 +26,15 @@ export function DesktopLayout({
   sidebarRight,
 }: DesktopLayoutProps) {
   const [showLeft, setShowLeft] = useState(true);
-  const [showRight, setShowRight] = useState(false); // Começa fechada para focar na lista
+  const [showRight, setShowRight] = useState(false);
 
-  // --- LÓGICA DE EXCLUSIVIDADE ---
   const openLeft = () => {
     setShowLeft(true);
-    setShowRight(false); // Fecha a outra
+    setShowRight(false);
   };
-
   const openRight = () => {
     setShowRight(true);
-    setShowLeft(false); // Fecha a outra
+    setShowLeft(false);
   };
 
   useEffect(() => {
@@ -51,7 +51,7 @@ export function DesktopLayout({
 
   return (
     <div className="flex h-screen w-full bg-zinc-950 text-gray-200 overflow-hidden font-sans relative">
-      {/* BARRA LATERAL ESQUERDA */}
+      {/* --- SIDEBAR ESQUERDA (ARQUIVOS) --- */}
       <aside
         className={`
           fixed inset-y-0 left-0 z-50 bg-zinc-900 border-r border-zinc-800
@@ -64,7 +64,7 @@ export function DesktopLayout({
           }
         `}
       >
-        <div className="h-10 flex items-center px-4 border-b border-zinc-800 text-xs font-bold text-zinc-500 uppercase tracking-wider justify-between shrink-0">
+        <div className="h-10 flex items-center px-4 border-b border-zinc-800 text-xs font-bold text-zinc-500 uppercase tracking-wider justify-between shrink-0 select-none">
           <span>Explorador</span>
           <button
             onClick={() => setShowLeft(false)}
@@ -85,7 +85,7 @@ export function DesktopLayout({
         </div>
       </aside>
 
-      {/* BACKDROP MOBILE */}
+      {/* BACKDROP (Para mobile/tela pequena) */}
       {(showLeft || showRight) && (
         <div
           className="fixed inset-0 bg-black/50 z-40 lg:hidden backdrop-blur-sm"
@@ -96,51 +96,85 @@ export function DesktopLayout({
         />
       )}
 
-      {/* ÁREA CENTRAL */}
+      {/* --- ÁREA CENTRAL (PRINCIPAL) --- */}
       <main className="flex-1 flex flex-col min-w-0 relative h-full transition-all duration-300">
-        {/* BARRA DE TÍTULO (Controles de Layout) */}
-        <div className="h-8 bg-zinc-950 flex items-center justify-between px-3 border-b border-zinc-900 select-none app-region-drag shrink-0">
-          <div className="flex items-center gap-2">
-            {/* Botão reabrir Esquerda */}
+        {/* ========================================================= */}
+        {/* BARRA DE TÍTULO CUSTOMIZADA (Drag Region + Botões)        */}
+        {/* ========================================================= */}
+        <header className="h-9 bg-zinc-950 flex items-center justify-between px-3 border-b border-zinc-900 select-none app-region-drag shrink-0">
+          {/* Lado Esquerdo: Título e Botão Sidebar */}
+          <div className="flex items-center gap-2 app-region-no-drag">
             {!showLeft && (
               <button
                 onClick={openLeft}
-                className="text-zinc-500 hover:text-white app-region-no-drag p-1 rounded hover:bg-zinc-800"
+                className="text-zinc-500 hover:text-white p-1 rounded hover:bg-zinc-800 transition-colors"
                 title="Abrir Arquivos"
               >
                 <PanelLeft size={16} />
               </button>
             )}
-            {/* Título do App (Só aparece se a sidebar esquerda estiver fechada para não duplicar informação) */}
-            {!showLeft && (
-              <span className="text-xs text-zinc-500 font-medium ml-2 hidden sm:inline">
-                YouSee Studio
-              </span>
-            )}
+            {/* Título do App (Visível apenas se a sidebar estiver fechada para não duplicar) */}
+            <span
+              className={`text-xs font-medium ml-2 transition-colors ${
+                !showLeft ? "text-zinc-400" : "text-zinc-600"
+              }`}
+            >
+              YouSee Studio
+            </span>
           </div>
 
-          {/* Botão reabrir Direita */}
-          {!showRight && (
-            <button
-              onClick={openRight}
-              className="text-zinc-500 hover:text-white app-region-no-drag p-1 rounded hover:bg-zinc-800"
-              title="Abrir Detalhes"
-            >
-              <PanelRight size={16} />
-            </button>
-          )}
-        </div>
+          {/* Lado Direito: Botões de Janela (Windows Controls) */}
+          <div className="flex items-center gap-1 app-region-no-drag">
+            {/* Botão Sidebar Direita (Wiki) */}
+            {!showRight && (
+              <button
+                onClick={openRight}
+                className="text-zinc-500 hover:text-white p-1 rounded hover:bg-zinc-800 mr-3"
+                title="Abrir Detalhes"
+              >
+                <PanelRight size={16} />
+              </button>
+            )}
 
+            {/* --- BOTÕES DO SISTEMA --- */}
+            <button
+              onClick={() => window.electron?.minimize()}
+              className="w-8 h-6 flex items-center justify-center text-zinc-400 hover:bg-zinc-800 hover:text-white rounded transition-colors"
+              title="Minimizar"
+            >
+              <Minus size={14} />
+            </button>
+
+            <button
+              onClick={() => window.electron?.maximize()}
+              className="w-8 h-6 flex items-center justify-center text-zinc-400 hover:bg-zinc-800 hover:text-white rounded transition-colors"
+              title="Maximizar"
+            >
+              <Square size={12} />
+            </button>
+
+            <button
+              onClick={() => window.electron?.close()}
+              className="w-8 h-6 flex items-center justify-center text-zinc-400 hover:bg-red-600 hover:text-white rounded transition-colors"
+              title="Fechar"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        </header>
+
+        {/* Toolbar do Editor */}
         <div className="z-10 bg-zinc-950/80 backdrop-blur-sm border-b border-zinc-800 shrink-0">
           {header}
         </div>
 
+        {/* Área do Texto */}
         <div className="flex-1 overflow-y-auto relative bg-zinc-950">
           {children}
         </div>
       </main>
 
-      {/* BARRA LATERAL DIREITA */}
+      {/* --- SIDEBAR DIREITA (WIKI/CONTEXTO) --- */}
       <aside
         className={`
           fixed inset-y-0 right-0 z-50 bg-zinc-900 border-l border-zinc-800
@@ -153,7 +187,7 @@ export function DesktopLayout({
           }
         `}
       >
-        <div className="h-10 flex items-center border-b border-zinc-800 shrink-0">
+        <div className="h-10 flex items-center border-b border-zinc-800 shrink-0 select-none">
           <button className="flex-1 h-full flex items-center justify-center text-zinc-400 hover:text-orange-500 hover:bg-zinc-800/50 border-b-2 border-transparent hover:border-orange-500 transition-all">
             <FileText size={16} />
           </button>

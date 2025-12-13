@@ -6,16 +6,20 @@ let mainWindow: BrowserWindow | null;
 
 const createWindow = () => {
   mainWindow = new BrowserWindow({
-    width: 1200,
+    width: 1280,
     height: 800,
-    backgroundColor: "#09090b", // Fundo Dark (Zinc-950) para não piscar branco ao abrir
+    minWidth: 800,
+    minHeight: 600,
+
+    frame: false, // 1. Remove a barra nativa do Windows
+    backgroundColor: "#09090b", // Cor do zinc-950 para evitar o "flash" branco ao abrir
+    titleBarStyle: "hidden", // Esconde título no Mac também
+
     webPreferences: {
-      nodeIntegration: false, // Segurança: Render não acessa Node direto
-      contextIsolation: true, // Segurança: Isola contextos
-      preload: path.join(__dirname, "preload.js"), // Nossa ponte segura
+      preload: path.join(__dirname, "preload.js"),
+      nodeIntegration: false,
+      contextIsolation: true,
     },
-    autoHideMenuBar: true, // Esconde a barra de menu padrão do Windows (File, Edit...)
-    title: "YouSee Editor",
   });
 
   const isDev = !app.isPackaged;
@@ -26,13 +30,41 @@ const createWindow = () => {
   mainWindow.loadURL(startUrl);
 
   if (isDev) {
-    mainWindow.webContents.openDevTools();
+    // Abre o DevTools apenas se estiver em modo de desenvolvimento
+    // mainWindow.webContents.openDevTools();
   }
 };
 
 // ==========================================
-// 1. SISTEMA DE ARQUIVOS (IMPORTAR/EXPORTAR)
-// Usado para trazer seus backups da Vercel
+// 1. CONTROLE DE JANELA (MINIMIZAR/FECHAR)
+// ==========================================
+
+ipcMain.on("window-minimize", (event) => {
+  const webContents = event.sender;
+  const win = BrowserWindow.fromWebContents(webContents);
+  if (win) win.minimize();
+});
+
+ipcMain.on("window-maximize", (event) => {
+  const webContents = event.sender;
+  const win = BrowserWindow.fromWebContents(webContents);
+  if (win) {
+    if (win.isMaximized()) {
+      win.unmaximize();
+    } else {
+      win.maximize();
+    }
+  }
+});
+
+ipcMain.on("window-close", (event) => {
+  const webContents = event.sender;
+  const win = BrowserWindow.fromWebContents(webContents);
+  if (win) win.close();
+});
+
+// ==========================================
+// 2. SISTEMA DE ARQUIVOS (IMPORTAR/EXPORTAR)
 // ==========================================
 
 // Salvar Arquivo Único (Exportar Backup ou PDF)
@@ -86,8 +118,7 @@ ipcMain.handle("dialog:openFile", async () => {
 });
 
 // ==========================================
-// 2. SISTEMA DE WORKSPACE (PASTA GERENCIADA)
-// Usado para o novo Dashboard "Modo Desktop"
+// 3. SISTEMA DE WORKSPACE (PASTA GERENCIADA)
 // ==========================================
 
 // Selecionar a Pasta de Trabalho
@@ -96,16 +127,14 @@ ipcMain.handle("dialog:selectFolder", async () => {
 
   const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
     title: "Selecione a pasta onde seus roteiros serão salvos",
-    properties: ["openDirectory"], // Apenas pastas
+    properties: ["openDirectory"],
   });
 
   if (canceled || filePaths.length === 0) return null;
-  return filePaths[0]; // Retorna o caminho da pasta (ex: C:\Docs\Roteiros)
+  return filePaths[0];
 });
 
-// Ler todo o conteúdo da Pasta (Listagem do Dashboard)
-// No arquivo electron/main.ts
-
+// Ler todo o conteúdo da Pasta (Listagem da Sidebar)
 ipcMain.handle("fs:readWorkspace", async (_, folderPath: string) => {
   try {
     const files = await fs.readdir(folderPath);
@@ -125,15 +154,14 @@ ipcMain.handle("fs:readWorkspace", async (_, folderPath: string) => {
           const json = JSON.parse(content);
 
           return {
-            id: fullPath,
+            id: fullPath, // ID é o caminho completo no Desktop
             title: json.title || fileName.replace(".yousee", ""),
-            // IMPORTANTE: Esta linha abaixo é a que permite o agrupamento
             seriesTitle: json.seriesTitle || "",
             chapterNumber: json.chapterNumber || "",
             lastModified: stats.mtimeMs,
           };
         } catch (e) {
-          return null;
+          return null; // Ignora arquivos corrompidos
         }
       })
     );
@@ -146,7 +174,6 @@ ipcMain.handle("fs:readWorkspace", async (_, folderPath: string) => {
 });
 
 // Salvar Silencioso (Ctrl+S / Autosave)
-// Grava diretamente no caminho sem abrir janela de diálogo
 ipcMain.handle("fs:saveToPath", async (_, { filePath, content }) => {
   try {
     await fs.writeFile(filePath, content, "utf-8");
@@ -157,9 +184,9 @@ ipcMain.handle("fs:saveToPath", async (_, { filePath, content }) => {
   }
 });
 
+// Deletar Arquivo
 ipcMain.handle("fs:deleteFile", async (_, filePath) => {
   try {
-    // Apaga o arquivo permanentemente
     await fs.unlink(filePath);
     return true;
   } catch (err) {
@@ -168,6 +195,7 @@ ipcMain.handle("fs:deleteFile", async (_, filePath) => {
   }
 });
 
+// Ler Conteúdo de um Arquivo Específico
 ipcMain.handle("fs:readFile", async (_, filePath) => {
   try {
     const content = await fs.readFile(filePath, "utf-8");

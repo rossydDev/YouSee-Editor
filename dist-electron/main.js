@@ -45,16 +45,18 @@ var path_1 = __importDefault(require("path"));
 var mainWindow;
 var createWindow = function () {
     mainWindow = new electron_1.BrowserWindow({
-        width: 1200,
+        width: 1280,
         height: 800,
-        backgroundColor: "#09090b", // Fundo Dark (Zinc-950) para não piscar branco ao abrir
+        minWidth: 800,
+        minHeight: 600,
+        frame: false, // 1. Remove a barra nativa do Windows
+        backgroundColor: "#09090b", // Cor do zinc-950 para evitar o "flash" branco ao abrir
+        titleBarStyle: "hidden", // Esconde título no Mac também
         webPreferences: {
-            nodeIntegration: false, // Segurança: Render não acessa Node direto
-            contextIsolation: true, // Segurança: Isola contextos
-            preload: path_1.default.join(__dirname, "preload.js"), // Nossa ponte segura
+            preload: path_1.default.join(__dirname, "preload.js"),
+            nodeIntegration: false,
+            contextIsolation: true,
         },
-        autoHideMenuBar: true, // Esconde a barra de menu padrão do Windows (File, Edit...)
-        title: "YouSee Editor",
     });
     var isDev = !electron_1.app.isPackaged;
     var startUrl = isDev
@@ -62,12 +64,39 @@ var createWindow = function () {
         : "file://".concat(path_1.default.join(__dirname, "../out/index.html"));
     mainWindow.loadURL(startUrl);
     if (isDev) {
-        mainWindow.webContents.openDevTools();
+        // Abre o DevTools apenas se estiver em modo de desenvolvimento
+        // mainWindow.webContents.openDevTools();
     }
 };
 // ==========================================
-// 1. SISTEMA DE ARQUIVOS (IMPORTAR/EXPORTAR)
-// Usado para trazer seus backups da Vercel
+// 1. CONTROLE DE JANELA (MINIMIZAR/FECHAR)
+// ==========================================
+electron_1.ipcMain.on("window-minimize", function (event) {
+    var webContents = event.sender;
+    var win = electron_1.BrowserWindow.fromWebContents(webContents);
+    if (win)
+        win.minimize();
+});
+electron_1.ipcMain.on("window-maximize", function (event) {
+    var webContents = event.sender;
+    var win = electron_1.BrowserWindow.fromWebContents(webContents);
+    if (win) {
+        if (win.isMaximized()) {
+            win.unmaximize();
+        }
+        else {
+            win.maximize();
+        }
+    }
+});
+electron_1.ipcMain.on("window-close", function (event) {
+    var webContents = event.sender;
+    var win = electron_1.BrowserWindow.fromWebContents(webContents);
+    if (win)
+        win.close();
+});
+// ==========================================
+// 2. SISTEMA DE ARQUIVOS (IMPORTAR/EXPORTAR)
 // ==========================================
 // Salvar Arquivo Único (Exportar Backup ou PDF)
 electron_1.ipcMain.handle("dialog:saveFile", function (_, content) { return __awaiter(void 0, void 0, void 0, function () {
@@ -140,8 +169,7 @@ electron_1.ipcMain.handle("dialog:openFile", function () { return __awaiter(void
     });
 }); });
 // ==========================================
-// 2. SISTEMA DE WORKSPACE (PASTA GERENCIADA)
-// Usado para o novo Dashboard "Modo Desktop"
+// 3. SISTEMA DE WORKSPACE (PASTA GERENCIADA)
 // ==========================================
 // Selecionar a Pasta de Trabalho
 electron_1.ipcMain.handle("dialog:selectFolder", function () { return __awaiter(void 0, void 0, void 0, function () {
@@ -153,18 +181,17 @@ electron_1.ipcMain.handle("dialog:selectFolder", function () { return __awaiter(
                     return [2 /*return*/, null];
                 return [4 /*yield*/, electron_1.dialog.showOpenDialog(mainWindow, {
                         title: "Selecione a pasta onde seus roteiros serão salvos",
-                        properties: ["openDirectory"], // Apenas pastas
+                        properties: ["openDirectory"],
                     })];
             case 1:
                 _a = _b.sent(), canceled = _a.canceled, filePaths = _a.filePaths;
                 if (canceled || filePaths.length === 0)
                     return [2 /*return*/, null];
-                return [2 /*return*/, filePaths[0]]; // Retorna o caminho da pasta (ex: C:\Docs\Roteiros)
+                return [2 /*return*/, filePaths[0]];
         }
     });
 }); });
-// Ler todo o conteúdo da Pasta (Listagem do Dashboard)
-// No arquivo electron/main.ts
+// Ler todo o conteúdo da Pasta (Listagem da Sidebar)
 electron_1.ipcMain.handle("fs:readWorkspace", function (_, folderPath) { return __awaiter(void 0, void 0, void 0, function () {
     var files, scriptFiles, scriptsData, err_3;
     return __generator(this, function (_a) {
@@ -190,16 +217,15 @@ electron_1.ipcMain.handle("fs:readWorkspace", function (_, folderPath) { return 
                                     content = _a.sent();
                                     json = JSON.parse(content);
                                     return [2 /*return*/, {
-                                            id: fullPath,
+                                            id: fullPath, // ID é o caminho completo no Desktop
                                             title: json.title || fileName.replace(".yousee", ""),
-                                            // IMPORTANTE: Esta linha abaixo é a que permite o agrupamento
                                             seriesTitle: json.seriesTitle || "",
                                             chapterNumber: json.chapterNumber || "",
                                             lastModified: stats.mtimeMs,
                                         }];
                                 case 3:
                                     e_1 = _a.sent();
-                                    return [2 /*return*/, null];
+                                    return [2 /*return*/, null]; // Ignora arquivos corrompidos
                                 case 4: return [2 /*return*/];
                             }
                         });
@@ -216,7 +242,6 @@ electron_1.ipcMain.handle("fs:readWorkspace", function (_, folderPath) { return 
     });
 }); });
 // Salvar Silencioso (Ctrl+S / Autosave)
-// Grava diretamente no caminho sem abrir janela de diálogo
 electron_1.ipcMain.handle("fs:saveToPath", function (_1, _a) { return __awaiter(void 0, [_1, _a], void 0, function (_, _b) {
     var err_4;
     var filePath = _b.filePath, content = _b.content;
@@ -236,16 +261,15 @@ electron_1.ipcMain.handle("fs:saveToPath", function (_1, _a) { return __awaiter(
         }
     });
 }); });
+// Deletar Arquivo
 electron_1.ipcMain.handle("fs:deleteFile", function (_, filePath) { return __awaiter(void 0, void 0, void 0, function () {
     var err_5;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
                 _a.trys.push([0, 2, , 3]);
-                // Apaga o arquivo permanentemente
                 return [4 /*yield*/, promises_1.default.unlink(filePath)];
             case 1:
-                // Apaga o arquivo permanentemente
                 _a.sent();
                 return [2 /*return*/, true];
             case 2:
@@ -256,6 +280,7 @@ electron_1.ipcMain.handle("fs:deleteFile", function (_, filePath) { return __awa
         }
     });
 }); });
+// Ler Conteúdo de um Arquivo Específico
 electron_1.ipcMain.handle("fs:readFile", function (_, filePath) { return __awaiter(void 0, void 0, void 0, function () {
     var content, err_6;
     return __generator(this, function (_a) {
