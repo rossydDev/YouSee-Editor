@@ -3,18 +3,14 @@ import {
   Bold,
   Bookmark,
   CheckCircle2,
-  ChevronLeft,
   Clapperboard,
   Italic,
   Loader2,
-  Menu,
   MessageSquare,
   Music,
   Type,
   User,
-  X,
 } from "lucide-react";
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ExportMenu } from "./toolbar/ExportMenu";
 
@@ -28,8 +24,6 @@ interface EditorToolbarProps {
   setChapterNumber: (val: string) => void;
   existingSeries: string[];
   saveStatus: "saved" | "saving";
-  toggleSidebar: () => void;
-  isSidebarOpen: boolean;
 }
 
 export function EditorToolbar({
@@ -42,8 +36,6 @@ export function EditorToolbar({
   setChapterNumber,
   existingSeries,
   saveStatus,
-  toggleSidebar,
-  isSidebarOpen,
 }: EditorToolbarProps) {
   const [, forceUpdate] = useState(0);
   const [showSeriesSuggestions, setShowSeriesSuggestions] = useState(false);
@@ -76,31 +68,12 @@ export function EditorToolbar({
   );
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-50 h-14 bg-zinc-950 border-b border-zinc-800 flex items-center justify-between px-2 sm:px-4 shadow-md gap-2 select-none">
-      {/* 1. ESQUERDA: Menu e Inputs */}
-      <div className="flex items-center gap-2 flex-1 min-w-0">
-        <button
-          onClick={toggleSidebar}
-          className={`p-2 rounded transition-colors shrink-0 ${
-            isSidebarOpen
-              ? "text-white bg-zinc-800"
-              : "text-zinc-400 hover:text-white hover:bg-zinc-800"
-          }`}
-          title={isSidebarOpen ? "Fechar Menu" : "Abrir Menu"}
-        >
-          {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
-        </button>
-
-        <Link
-          href="/dashboard"
-          className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded transition-colors shrink-0 hidden md:block"
-          title="Voltar ao Dashboard"
-        >
-          <ChevronLeft size={20} />
-        </Link>
-
+    <div className="h-12 flex items-center justify-between px-2 sm:px-4 gap-4 select-none w-full">
+      {/* 1. ESQUERDA: Inputs de Metadados */}
+      <div className="flex items-center gap-2 min-w-0 shrink-1">
         {/* Inputs Group */}
-        <div className="flex items-center gap-2 relative min-w-0 flex-1">
+        <div className="flex items-center gap-2 relative min-w-0">
+          {/* Série (Esconde em telas muito pequenas mobile) */}
           <div className="relative hidden sm:block group">
             <input
               type="text"
@@ -138,6 +111,7 @@ export function EditorToolbar({
 
           <span className="text-zinc-600 font-mono hidden lg:inline">#</span>
 
+          {/* Capítulo */}
           <input
             type="number"
             value={chapterNumber}
@@ -148,18 +122,20 @@ export function EditorToolbar({
 
           <span className="text-zinc-600 hidden lg:inline">|</span>
 
+          {/* Título Principal */}
           <input
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="bg-transparent text-gray-200 font-bold text-sm focus:outline-none focus:bg-zinc-900 rounded px-2 py-1 w-full min-w-[50px] transition-colors border border-transparent focus:border-zinc-700 placeholder-zinc-600 truncate"
+            className="bg-transparent text-gray-200 font-bold text-sm focus:outline-none focus:bg-zinc-900 rounded px-2 py-1 w-32 sm:w-64 transition-colors border border-transparent focus:border-zinc-700 placeholder-zinc-600 truncate"
             placeholder="Título do Episódio"
           />
         </div>
       </div>
 
-      {/* 2. CENTRO: Ferramentas (Toolbar) */}
-      <div className="hidden lg:flex items-center gap-1 overflow-x-auto no-scrollbar px-2 shrink-0 max-w-[45vw] md:max-w-none mask-linear-fade">
+      {/* 2. CENTRO: Ferramentas (Toolbar) - CORRIGIDO */}
+      {/* Removi o 'hidden xl:flex' e coloquei flex com overflow para não quebrar nunca */}
+      <div className="flex items-center gap-1 overflow-x-auto no-scrollbar px-2 shrink-0 mask-linear-fade max-w-[40vw] justify-center">
         <button
           onClick={() => editor.chain().focus().toggleBold().run()}
           className={`${btnClass} ${isActive("bold")}`}
@@ -242,8 +218,8 @@ export function EditorToolbar({
       </div>
 
       {/* 3. DIREITA: Status e Exportação */}
-      <div className="flex items-center gap-3">
-        {/* INDICADOR DE SAVE (NOVO) */}
+      <div className="flex items-center gap-3 shrink-0">
+        {/* INDICADOR DE SAVE */}
         <div className="flex items-center gap-1.5 px-2">
           {saveStatus === "saving" ? (
             <>
@@ -255,8 +231,6 @@ export function EditorToolbar({
           ) : (
             <>
               <CheckCircle2 size={14} className="text-orange-500" />
-
-              {/* Texto sutil para não cansar a vista */}
               <span className="text-xs text-zinc-500 hidden sm:inline">
                 Salvo
               </span>

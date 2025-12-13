@@ -3,7 +3,12 @@
 import Focus from "@tiptap/extension-focus";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+
+// EXTENSIONS
 import { AutocompleteExtension } from "./extensions/AutocompleteExtension";
+import { AutoNumberingExtension } from "./extensions/AutoNumberingExtension";
 import { Character } from "./extensions/Character";
 import { Dialogue } from "./extensions/Dialogue";
 import { ScreenplayDocument } from "./extensions/Document";
@@ -15,14 +20,13 @@ import { ScreenplayShortcuts } from "./extensions/Shortcuts";
 import { StoryPageHeader } from "./extensions/StoryPageHeader";
 
 // COMPONENTS & HOOKS
-import { EditorLayout } from "@/components/layout/EditorLayout";
+import { FileExplorer } from "@/components/desktop/FileExplorer";
+import { DesktopLayout } from "@/components/layout/DesktopLayout";
 import { useAutoSave } from "@/hooks/useAutoSave";
-import { useEffect, useState } from "react";
+import { Script, deleteScript, generateId } from "@/lib/storage";
 import { EditorToolbar } from "./EditorToolbar";
-import { AutoNumberingExtension } from "./extensions/AutoNumberingExtension";
 import { Sidebar } from "./Sidebar";
 
-// --- CORREÇÃO 3: Estrutura Inicial (Page 1, Panel 1, Parágrafo) ---
 const DEFAULT_CONTENT = `
    <div data-type="page">
        <story-page-header></story-page-header>
@@ -36,8 +40,8 @@ interface TipTapEditorProps {
 }
 
 export function TipTapEditor({ scriptId }: TipTapEditorProps) {
-  // --- CORREÇÃO 2: Sidebar fechada por padrão ---
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const router = useRouter();
+  const [workspaceFiles, setWorkspaceFiles] = useState<Script[]>([]);
 
   // 1. EDITOR CONFIG
   const editor = useEditor({
@@ -60,22 +64,15 @@ export function TipTapEditor({ scriptId }: TipTapEditorProps) {
     immediatelyRender: false,
     editorProps: {
       attributes: { class: "outline-none" },
-
-      // --- CORREÇÃO 1: Bug de Colagem (Pasting Issue) ---
       transformPastedText(text) {
-        // 1. Preserva quebras de parágrafo reais (\n\n)
         let cleaned = text.replace(/(\r?\n\r?\n)/g, "[PARAGRAPH_BREAK]");
-
-        // 2. Remove todas as quebras de linha simples (PDF) e hífens, substituindo por espaço
         cleaned = cleaned.replace(/[\r\n-]/g, " ");
-
-        // 3. Restaura as quebras de parágrafo reais para formar novos blocos
         return cleaned.replace(/\[PARAGRAPH_BREAK]/g, "\n\n");
       },
     },
   });
 
-  // 2. HOOKS
+  // 2. HOOKS (AutoSave)
   const {
     isLoaded,
     saveContent,
@@ -89,14 +86,69 @@ export function TipTapEditor({ scriptId }: TipTapEditorProps) {
     existingSeries,
   } = useAutoSave(editor, scriptId);
 
-  // 3. LISTENERS
+  // 3. GERENCIAMENTO DE ARQUIVOS (File System)
+  const loadWorkspaceFiles = async () => {
+    // Se não tiver electron (ex: abriu no navegador sem querer), não faz nada ou carrega vazio
+    if (typeof window === "undefined" || !window.electron) return;
+
+    const path = localStorage.getItem("yousee_workspace_path");
+    if (!path) return;
+
+    try {
+      const files = await window.electron.readWorkspace(path);
+      setWorkspaceFiles(files);
+    } catch (error) {
+      console.error("Erro ao ler arquivos:", error);
+    }
+  };
+
+  // Carrega lista inicial
+  useEffect(() => {
+    loadWorkspaceFiles();
+  }, []);
+
+  // Recarrega lista ao salvar (para atualizar títulos/capítulos na sidebar)
+  useEffect(() => {
+    if (saveStatus === "saved") {
+      setTimeout(() => loadWorkspaceFiles(), 500);
+    }
+  }, [saveStatus]);
+
+  // --- AÇÕES DO EXPLORER ---
+  const handleFileSelect = (fileId: string) => {
+    saveContent();
+    router.push(`/editor/${encodeURIComponent(fileId)}`);
+  };
+
+  const handleCreateNew = async () => {
+    const path = localStorage.getItem("yousee_workspace_path");
+    if (path) {
+      const newId = generateId();
+      const filename = `Roteiro-${newId.slice(0, 6)}.yousee`;
+      const separator = path.includes("\\") ? "\\" : "/";
+      const fullPath = `${path}${separator}${filename}`;
+      router.push(`/editor/${encodeURIComponent(fullPath)}`);
+    }
+  };
+
+  const handleDeleteFile = async (fileId: string) => {
+    if (confirm("Tem certeza que deseja apagar este roteiro?")) {
+      await deleteScript(fileId);
+      await loadWorkspaceFiles();
+      if (fileId === scriptId) {
+        handleCreateNew(); // Se apagou o atual, vai para um novo
+      }
+    }
+  };
+
+  // 4. SCROLL CINEMATOGRÁFICO & LISTENERS
   useEffect(() => {
     if (!editor) return;
 
     // Auto-save manual trigger
     editor.on("update", saveContent);
 
-    // Scroll Cinematográfico
+    // Scroll Suave ao digitar
     const handleScroll = () => {
       requestAnimationFrame(() => {
         const { from } = editor.state.selection;
@@ -120,11 +172,9 @@ export function TipTapEditor({ scriptId }: TipTapEditorProps) {
 
   if (!editor) return null;
 
-  // 4. RENDERIZAÇÃO LIMPA VIA LAYOUT
+  // 5. RENDERIZAÇÃO: LAYOUT DE ESTÚDIO (ÚNICO)
   return (
-    <EditorLayout
-      isSidebarOpen={isSidebarOpen}
-      setIsSidebarOpen={setIsSidebarOpen}
+    <DesktopLayout
       header={
         <EditorToolbar
           editor={editor}
@@ -136,27 +186,28 @@ export function TipTapEditor({ scriptId }: TipTapEditorProps) {
           setChapterNumber={setChapterNumber}
           existingSeries={existingSeries}
           saveStatus={saveStatus}
-          isSidebarOpen={isSidebarOpen}
-          toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
         />
       }
-      sidebar={
-        <Sidebar
-          editor={editor}
-          onCloseMobile={() => setIsSidebarOpen(false)}
+      sidebarLeft={
+        <FileExplorer
+          files={workspaceFiles}
+          currentFileId={scriptId}
+          onFileSelect={handleFileSelect}
+          onCreateFile={handleCreateNew}
+          onDeleteFile={handleDeleteFile}
         />
       }
+      sidebarRight={<Sidebar editor={editor} onCloseMobile={() => {}} />}
     >
       <div
         className={`
-          flex justify-center w-full py-12 pt-10 pb-[50vh]
-          transition-opacity duration-500
-          px-4 md:px-0
-          ${isLoaded ? "opacity-100" : "opacity-0"}
+            flex justify-center w-full py-12 pt-10 pb-[50vh] px-8
+            transition-opacity duration-500
+            ${isLoaded ? "opacity-100" : "opacity-0"}
         `}
       >
         <EditorContent editor={editor} />
       </div>
-    </EditorLayout>
+    </DesktopLayout>
   );
 }
