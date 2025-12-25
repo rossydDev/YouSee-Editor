@@ -2,6 +2,8 @@ import { app, BrowserWindow, dialog, ipcMain } from "electron";
 import fs from "fs/promises";
 import path from "path";
 
+// NOTA: Removemos o 'electron-context-menu' pois faremos um customizado no React
+
 let mainWindow: BrowserWindow | null;
 
 const createWindow = () => {
@@ -11,14 +13,15 @@ const createWindow = () => {
     minWidth: 800,
     minHeight: 600,
 
-    frame: false, // 1. Remove a barra nativa do Windows
-    backgroundColor: "#09090b", // Cor do zinc-950 para evitar o "flash" branco ao abrir
-    titleBarStyle: "hidden", // Esconde título no Mac também
+    frame: false,
+    backgroundColor: "#09090b",
+    titleBarStyle: "hidden",
 
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       nodeIntegration: false,
       contextIsolation: true,
+      spellcheck: true, // Garante que a verificação ortográfica está ativa
     },
   });
 
@@ -29,14 +32,36 @@ const createWindow = () => {
 
   mainWindow.loadURL(startUrl);
 
-  if (isDev) {
-    // Abre o DevTools apenas se estiver em modo de desenvolvimento
-    // mainWindow.webContents.openDevTools();
-  }
+  // Define o idioma para Português
+  mainWindow.webContents.session.setSpellCheckerLanguages(["pt-BR"]);
+
+  // ========================================================
+  // LÓGICA DO MENU DE CONTEXTO CUSTOMIZADO
+  // ========================================================
+
+  // 1. Ouve quando o usuário clica com o botão direito
+  mainWindow.webContents.on("context-menu", (_, params) => {
+    // Envia evento para o React SE houver sugestões de erro ou texto selecionado
+    if (params.dictionarySuggestions.length > 0 || params.selectionText) {
+      mainWindow?.webContents.send("show-context-menu", {
+        x: params.x,
+        y: params.y,
+        suggestions: params.dictionarySuggestions,
+        hasSelection: !!params.selectionText,
+      });
+    }
+  });
 };
 
+// 2. Recebe o comando do React para aplicar a correção
+ipcMain.on("replace-misspelling", (_, word) => {
+  if (mainWindow) {
+    mainWindow.webContents.replaceMisspelling(word);
+  }
+});
+
 // ==========================================
-// 1. CONTROLE DE JANELA (MINIMIZAR/FECHAR)
+// CONTROLES DE JANELA
 // ==========================================
 
 ipcMain.on("window-minimize", (event) => {
@@ -64,87 +89,61 @@ ipcMain.on("window-close", (event) => {
 });
 
 // ==========================================
-// 2. SISTEMA DE ARQUIVOS (IMPORTAR/EXPORTAR)
+// SISTEMA DE ARQUIVOS
 // ==========================================
 
-// Salvar Arquivo Único (Exportar Backup ou PDF)
 ipcMain.handle("dialog:saveFile", async (_, content: string) => {
   if (!mainWindow) return { success: false };
-
   const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
     title: "Salvar Arquivo",
     defaultPath: "roteiro.yousee",
     filters: [
       { name: "YouSee Script", extensions: ["yousee", "json"] },
-      { name: "Todos os Arquivos", extensions: ["*"] },
+      { name: "Todos", extensions: ["*"] },
     ],
   });
-
-  if (canceled || !filePath) {
-    return { success: false };
-  }
-
+  if (canceled || !filePath) return { success: false };
   try {
     await fs.writeFile(filePath, content, "utf-8");
     return { success: true, filePath };
   } catch (err) {
-    console.error("Erro ao salvar:", err);
     return { success: false, error: "Falha ao gravar arquivo." };
   }
 });
 
-// Abrir Arquivo Único (Importar Backup da Vercel)
 ipcMain.handle("dialog:openFile", async () => {
   if (!mainWindow) return null;
-
   const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
-    title: "Importar Roteiro ou Backup",
+    title: "Importar Roteiro",
     properties: ["openFile"],
     filters: [{ name: "YouSee Script", extensions: ["yousee", "json"] }],
   });
-
-  if (canceled || filePaths.length === 0) {
-    return null;
-  }
-
+  if (canceled || filePaths.length === 0) return null;
   try {
     const filePath = filePaths[0];
     const content = await fs.readFile(filePath, "utf-8");
     return { content, filePath };
   } catch (err) {
-    console.error("Erro ao ler arquivo:", err);
     return null;
   }
 });
 
-// ==========================================
-// 3. SISTEMA DE WORKSPACE (PASTA GERENCIADA)
-// ==========================================
-
-// Selecionar a Pasta de Trabalho
 ipcMain.handle("dialog:selectFolder", async () => {
   if (!mainWindow) return null;
-
   const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
-    title: "Selecione a pasta onde seus roteiros serão salvos",
+    title: "Selecione a pasta de trabalho",
     properties: ["openDirectory"],
   });
-
   if (canceled || filePaths.length === 0) return null;
   return filePaths[0];
 });
 
-// Ler todo o conteúdo da Pasta (Listagem da Sidebar)
 ipcMain.handle("fs:readWorkspace", async (_, folderPath: string) => {
   try {
     const files = await fs.readdir(folderPath);
-
-    // Filtra apenas arquivos .yousee ou .json
     const scriptFiles = files.filter(
       (file) => file.endsWith(".yousee") || file.endsWith(".json")
     );
-
-    // Lê cada arquivo para extrair o Título e a SÉRIE
     const scriptsData = await Promise.all(
       scriptFiles.map(async (fileName) => {
         try {
@@ -152,74 +151,60 @@ ipcMain.handle("fs:readWorkspace", async (_, folderPath: string) => {
           const stats = await fs.stat(fullPath);
           const content = await fs.readFile(fullPath, "utf-8");
           const json = JSON.parse(content);
-
           return {
-            id: fullPath, // ID é o caminho completo no Desktop
+            id: fullPath,
             title: json.title || fileName.replace(".yousee", ""),
             seriesTitle: json.seriesTitle || "",
             chapterNumber: json.chapterNumber || "",
             lastModified: stats.mtimeMs,
           };
         } catch (e) {
-          return null; // Ignora arquivos corrompidos
+          return null;
         }
       })
     );
-
     return scriptsData.filter((s) => s !== null);
   } catch (err) {
-    console.error("Erro ao ler workspace:", err);
     return [];
   }
 });
 
-// Salvar Silencioso (Ctrl+S / Autosave)
 ipcMain.handle("fs:saveToPath", async (_, { filePath, content }) => {
   try {
     await fs.writeFile(filePath, content, "utf-8");
     return true;
   } catch (err) {
-    console.error(`Erro ao salvar em ${filePath}:`, err);
     return false;
   }
 });
 
-// Deletar Arquivo
 ipcMain.handle("fs:deleteFile", async (_, filePath) => {
   try {
     await fs.unlink(filePath);
     return true;
   } catch (err) {
-    console.error(`Erro ao deletar arquivo ${filePath}:`, err);
     return false;
   }
 });
 
-// Ler Conteúdo de um Arquivo Específico
 ipcMain.handle("fs:readFile", async (_, filePath) => {
   try {
-    const content = await fs.readFile(filePath, "utf-8");
-    return content;
+    return await fs.readFile(filePath, "utf-8");
   } catch (err) {
-    console.error(`Erro ao ler arquivo ${filePath}:`, err);
     return null;
   }
 });
 
 // ==========================================
-// CICLO DE VIDA DO APP
+// LIFECYCLE
 // ==========================================
 
 app.on("ready", createWindow);
 
 app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
-    app.quit();
-  }
+  if (process.platform !== "darwin") app.quit();
 });
 
 app.on("activate", () => {
-  if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow();
-  }
+  if (BrowserWindow.getAllWindows().length === 0) createWindow();
 });

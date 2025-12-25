@@ -23,6 +23,7 @@ import { StoryPageHeader } from "./extensions/StoryPageHeader";
 import { FileExplorer } from "@/components/desktop/FileExplorer";
 import { StartScreen } from "@/components/desktop/StartScreen";
 import { DesktopLayout } from "@/components/layout/DesktopLayout";
+import { ConfirmModal } from "@/components/ui/ConfirmModal"; // <--- 1. IMPORTAÇÃO DO MODAL
 import { useAutoSave } from "@/hooks/useAutoSave";
 import { Script, deleteScript, generateId } from "@/lib/storage";
 import { EditorToolbar } from "./EditorToolbar";
@@ -43,9 +44,13 @@ interface TipTapEditorProps {
 export function TipTapEditor({ scriptId }: TipTapEditorProps) {
   const router = useRouter();
   const [workspaceFiles, setWorkspaceFiles] = useState<Script[]>([]);
+
+  // 2. ESTADO PARA CONTROLAR O MODAL DE DELETE
+  const [fileToDelete, setFileToDelete] = useState<string | null>(null);
+
   const hasOpenScript = !!scriptId && scriptId !== "undefined";
 
-  // 1. EDITOR CONFIG
+  // --- EDITOR CONFIG ---
   const editor = useEditor(
     {
       extensions: [
@@ -67,7 +72,10 @@ export function TipTapEditor({ scriptId }: TipTapEditorProps) {
       editable: hasOpenScript,
       immediatelyRender: false,
       editorProps: {
-        attributes: { class: "outline-none" },
+        attributes: {
+          class: "outline-none",
+          spellcheck: "true", // Habilita corretor
+        },
         transformPastedText(text) {
           let cleaned = text.replace(/(\r?\n\r?\n)/g, "[PARAGRAPH_BREAK]");
           cleaned = cleaned.replace(/[\r\n-]/g, " ");
@@ -78,7 +86,7 @@ export function TipTapEditor({ scriptId }: TipTapEditorProps) {
     [scriptId]
   );
 
-  // 2. HOOKS
+  // --- HOOKS ---
   const {
     isLoaded,
     saveContent,
@@ -92,7 +100,7 @@ export function TipTapEditor({ scriptId }: TipTapEditorProps) {
     existingSeries,
   } = useAutoSave(editor, hasOpenScript ? scriptId : "");
 
-  // 3. FILE SYSTEM
+  // --- FILE SYSTEM ---
   const loadWorkspaceFiles = async () => {
     if (typeof window === "undefined" || !window.electron) return;
     const path = localStorage.getItem("yousee_workspace_path");
@@ -109,6 +117,7 @@ export function TipTapEditor({ scriptId }: TipTapEditorProps) {
   useEffect(() => {
     loadWorkspaceFiles();
   }, []);
+
   useEffect(() => {
     if (saveStatus === "saved") setTimeout(() => loadWorkspaceFiles(), 500);
   }, [saveStatus]);
@@ -119,16 +128,38 @@ export function TipTapEditor({ scriptId }: TipTapEditorProps) {
     router.push(`/editor/${encodeURIComponent(fileId)}`);
   };
 
-  const handleCreateNew = async () => {
+  const handleCreateNew = async (predefinedSeries?: string) => {
     const path = localStorage.getItem("yousee_workspace_path");
+
     if (path) {
       const newId = generateId();
-      const filename = `Roteiro-${newId.slice(0, 6)}.yousee`;
+
+      const prefix = predefinedSeries
+        ? predefinedSeries.replace(/[^a-z0-9]/gi, "_").toLowerCase()
+        : "roteiro";
+
+      const filename = `${prefix}-${newId.slice(0, 6)}.yousee`;
       const separator = path.includes("\\") ? "\\" : "/";
       const fullPath = `${path}${separator}${filename}`;
+
+      if (predefinedSeries && window.electron) {
+        const initialContent = {
+          id: fullPath,
+          title: "",
+          seriesTitle: predefinedSeries,
+          chapterNumber: "",
+          content: null,
+          lastModified: Date.now(),
+        };
+        await window.electron.saveToWorkspace(
+          fullPath,
+          JSON.stringify(initialContent)
+        );
+        setTimeout(() => loadWorkspaceFiles(), 200);
+      }
+
       router.push(`/editor/${encodeURIComponent(fullPath)}`);
     } else {
-      // Se não tiver pasta, pede para selecionar primeiro
       const newPath = await window.electron?.selectFolder();
       if (newPath) {
         localStorage.setItem("yousee_workspace_path", newPath);
@@ -137,15 +168,24 @@ export function TipTapEditor({ scriptId }: TipTapEditorProps) {
     }
   };
 
-  const handleDeleteFile = async (fileId: string) => {
-    if (confirm("Tem certeza que deseja apagar este roteiro?")) {
-      await deleteScript(fileId);
+  // 3. LÓGICA DE DELETE COM MODAL
+  const requestDeleteFile = (fileId: string) => {
+    setFileToDelete(fileId); // Abre o modal
+  };
+
+  const executeDelete = async () => {
+    if (fileToDelete) {
+      await deleteScript(fileToDelete);
       await loadWorkspaceFiles();
-      if (fileId === scriptId) router.push("/editor");
+      // Se apagou o arquivo que estava aberto, volta pra home
+      if (fileToDelete === scriptId) {
+        router.push("/editor");
+      }
+      setFileToDelete(null); // Fecha modal
     }
   };
 
-  // --- IMPORTAÇÃO DE BACKUP ---
+  // --- IMPORTAÇÃO ---
   const handleImportBackup = async () => {
     if (!window.electron) return;
 
@@ -166,7 +206,6 @@ export function TipTapEditor({ scriptId }: TipTapEditorProps) {
       for (const script of scriptsToImport) {
         if (!script.content) continue;
 
-        // Gera nome de arquivo seguro
         const safeTitle = (script.title || "Sem Titulo")
           .replace(/[^a-z0-9]/gi, "_")
           .toLowerCase();
@@ -181,7 +220,7 @@ export function TipTapEditor({ scriptId }: TipTapEditorProps) {
 
         const fileContent = {
           ...script,
-          id: fullPath, // Atualiza ID para o caminho do arquivo
+          id: fullPath,
           lastModified: Date.now(),
         };
 
@@ -193,14 +232,14 @@ export function TipTapEditor({ scriptId }: TipTapEditorProps) {
       }
 
       alert(`${importedCount} roteiros importados com sucesso!`);
-      loadWorkspaceFiles(); // Atualiza a lista na hora
+      loadWorkspaceFiles();
     } catch (error) {
       console.error("Erro ao importar:", error);
       alert("Erro ao ler arquivo. Verifique se é um backup válido.");
     }
   };
 
-  // Listeners de Editor (Update Scroll, etc)
+  // --- LISTENERS ---
   useEffect(() => {
     if (!editor || !hasOpenScript) return;
     editor.on("update", saveContent);
@@ -209,15 +248,13 @@ export function TipTapEditor({ scriptId }: TipTapEditorProps) {
     };
   }, [editor, saveContent, hasOpenScript]);
 
-  // --- ATALHO DE TECLADO: CTRL + S (NOVO) ---
   useEffect(() => {
-    if (!hasOpenScript) return; // Só ativa se estiver editando um roteiro
+    if (!hasOpenScript) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Detecta Ctrl+S ou Command+S (Mac)
       if ((e.ctrlKey || e.metaKey) && e.key === "s") {
-        e.preventDefault(); // Impede o navegador de tentar salvar a página HTML
-        saveContent(); // Força o save do roteiro imediatamente
+        e.preventDefault();
+        saveContent();
       }
     };
 
@@ -248,7 +285,7 @@ export function TipTapEditor({ scriptId }: TipTapEditorProps) {
           currentFileId={scriptId}
           onFileSelect={handleFileSelect}
           onCreateFile={handleCreateNew}
-          onDeleteFile={handleDeleteFile}
+          onDeleteFile={requestDeleteFile} // <--- Passando a função que abre o modal
         />
       }
       sidebarRight={
@@ -266,9 +303,8 @@ export function TipTapEditor({ scriptId }: TipTapEditorProps) {
           <EditorContent editor={editor} />
         </div>
       ) : (
-        /* START SCREEN COM IMPORTAÇÃO */
         <StartScreen
-          onCreate={handleCreateNew}
+          onCreate={() => handleCreateNew()}
           onImport={handleImportBackup}
           hasWorkspace={
             workspaceFiles.length > 0 ||
@@ -277,6 +313,18 @@ export function TipTapEditor({ scriptId }: TipTapEditorProps) {
           }
         />
       )}
+
+      {/* 4. RENDERIZA O MODAL FORA DO EDITOR, MAS DENTRO DO LAYOUT */}
+      <ConfirmModal
+        isOpen={!!fileToDelete}
+        onClose={() => setFileToDelete(null)}
+        onConfirm={executeDelete}
+        title="Excluir Roteiro"
+        message="Tem certeza que deseja mover este roteiro para o lixo? Essa ação não pode ser desfeita e você perderá todo o conteúdo escrito."
+        confirmText="Sim, excluir"
+        cancelText="Cancelar"
+        isDestructive={true}
+      />
     </DesktopLayout>
   );
 }

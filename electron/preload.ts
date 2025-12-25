@@ -10,11 +10,11 @@ contextBridge.exposeInMainWorld("electron", {
 
   readWorkspace: (path: string) => ipcRenderer.invoke("fs:readWorkspace", path),
 
-  // MANTENHA AMBOS PARA COMPATIBILIDADE
+  // Compatibilidade
   saveToWorkspace: (path: string, content: string) =>
     ipcRenderer.invoke("fs:saveToPath", { filePath: path, content }),
   saveToPath: (path: string, content: string) =>
-    ipcRenderer.invoke("fs:saveToPath", { filePath: path, content }), // <--- LINHA NOVA (Alias)
+    ipcRenderer.invoke("fs:saveToPath", { filePath: path, content }),
 
   deleteFile: (path: string) => ipcRenderer.invoke("fs:deleteFile", path),
   readFile: (path: string) => ipcRenderer.invoke("fs:readFile", path),
@@ -23,4 +23,13 @@ contextBridge.exposeInMainWorld("electron", {
   minimize: () => ipcRenderer.send("window-minimize"),
   maximize: () => ipcRenderer.send("window-maximize"),
   close: () => ipcRenderer.send("window-close"),
+
+  // --- MENU DE CONTEXTO (CORRETOR) ---
+  // Escuta o evento que vem do Main
+  onShowContextMenu: (callback: (data: any) => void) =>
+    ipcRenderer.on("show-context-menu", (_, data) => callback(data)),
+
+  // Manda a palavra corrigida de volta pro Main
+  replaceMisspelling: (word: string) =>
+    ipcRenderer.send("replace-misspelling", word),
 });

@@ -7,7 +7,6 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-
     "compile:electron": "tsc -p tsconfig.electron.json",
     "electron:dev": "concurrently -k \"cross-env BROWSER=none npm run dev\" \"npm run compile:electron && wait-on tcp:3000 && electron .\""
   },
@@ -20,6 +19,7 @@
     "@tiptap/suggestion": "^3.11.1",
     "@types/file-saver": "^2.0.7",
     "clsx": "^2.1.1",
+    "electron-context-menu": "^4.1.1",
     "file-saver": "^2.0.5",
     "lucide-react": "^0.555.0",
     "next": "^16.0.7",

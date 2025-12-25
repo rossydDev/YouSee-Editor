@@ -1,5 +1,6 @@
 "use client";
 
+import { CustomContextMenu } from "@/components/ui/CustomContextMenu"; // <--- 1. IMPORTAR
 import {
   FileText,
   Minus,
@@ -7,10 +8,9 @@ import {
   PanelRight,
   Settings,
   Square,
-  Users,
   X,
 } from "lucide-react";
-import { useRouter } from "next/navigation"; // <--- Importante para navegação
+import { useRouter } from "next/navigation";
 import { ReactNode, useEffect, useState } from "react";
 
 interface DesktopLayoutProps {
@@ -26,7 +26,7 @@ export function DesktopLayout({
   sidebarLeft,
   sidebarRight,
 }: DesktopLayoutProps) {
-  const router = useRouter(); // <--- Hook de navegação
+  const router = useRouter();
   const [showLeft, setShowLeft] = useState(true);
   const [showRight, setShowRight] = useState(false);
 
@@ -53,7 +53,7 @@ export function DesktopLayout({
 
   return (
     <div className="flex h-screen w-full bg-zinc-950 text-gray-200 overflow-hidden font-sans relative">
-      {/* --- SIDEBAR ESQUERDA (ARQUIVOS) --- */}
+      {/* --- SIDEBAR ESQUERDA --- */}
       <aside
         className={`
           fixed inset-y-0 left-0 z-50 bg-zinc-900 border-r border-zinc-800
@@ -87,7 +87,7 @@ export function DesktopLayout({
         </div>
       </aside>
 
-      {/* BACKDROP (Para mobile/tela pequena) */}
+      {/* BACKDROP */}
       {(showLeft || showRight) && (
         <div
           className="fixed inset-0 bg-black/50 z-40 lg:hidden backdrop-blur-sm"
@@ -98,114 +98,84 @@ export function DesktopLayout({
         />
       )}
 
-      {/* --- ÁREA CENTRAL (PRINCIPAL) --- */}
+      {/* --- MAIN --- */}
       <main className="flex-1 flex flex-col min-w-0 relative h-full transition-all duration-300">
-        {/* ========================================================= */}
-        {/* BARRA DE TÍTULO CUSTOMIZADA                               */}
-        {/* ========================================================= */}
         <header className="h-9 bg-zinc-950 flex items-center justify-between px-3 border-b border-zinc-900 select-none app-region-drag shrink-0">
-          {/* Lado Esquerdo: Botão Sidebar e BOTÃO HOME */}
           <div className="flex items-center gap-2 app-region-no-drag">
             {!showLeft && (
               <button
                 onClick={openLeft}
                 className="text-zinc-500 hover:text-white p-1 rounded hover:bg-zinc-800 transition-colors"
-                title="Abrir Arquivos"
               >
                 <PanelLeft size={16} />
               </button>
             )}
-
-            {/* TÍTULO AGORA É UM BOTÃO DE VOLTAR PARA O INÍCIO */}
             <button
               onClick={() => router.push("/editor")}
-              className={`
-                text-xs font-bold ml-2 transition-colors flex items-center gap-2 px-2 py-1 rounded
-                hover:bg-zinc-800 cursor-pointer border border-transparent hover:border-zinc-800
-                ${
-                  !showLeft
-                    ? "text-zinc-400 hover:text-white"
-                    : "text-zinc-600 hover:text-zinc-300"
-                }
-              `}
-              title="Voltar para a Tela Inicial (Fechar Roteiro)"
+              className={`text-xs font-bold ml-2 transition-colors flex items-center gap-2 px-2 py-1 rounded hover:bg-zinc-800 cursor-pointer border border-transparent hover:border-zinc-800 ${
+                !showLeft
+                  ? "text-zinc-400 hover:text-white"
+                  : "text-zinc-600 hover:text-zinc-300"
+              }`}
             >
               YouSee Studio
             </button>
           </div>
 
-          {/* Lado Direito: Botões de Janela (Windows Controls) */}
           <div className="flex items-center gap-1 app-region-no-drag">
-            {/* Botão Sidebar Direita (Wiki) */}
             {!showRight && (
               <button
                 onClick={openRight}
                 className="text-zinc-500 hover:text-white p-1 rounded hover:bg-zinc-800 mr-3"
-                title="Abrir Detalhes"
               >
                 <PanelRight size={16} />
               </button>
             )}
-
-            {/* --- BOTÕES DO SISTEMA --- */}
             <button
               onClick={() => window.electron?.minimize()}
               className="w-8 h-6 flex items-center justify-center text-zinc-400 hover:bg-zinc-800 hover:text-white rounded transition-colors"
-              title="Minimizar"
             >
               <Minus size={14} />
             </button>
-
             <button
               onClick={() => window.electron?.maximize()}
               className="w-8 h-6 flex items-center justify-center text-zinc-400 hover:bg-zinc-800 hover:text-white rounded transition-colors"
-              title="Maximizar"
             >
               <Square size={12} />
             </button>
-
             <button
               onClick={() => window.electron?.close()}
               className="w-8 h-6 flex items-center justify-center text-zinc-400 hover:bg-red-600 hover:text-white rounded transition-colors"
-              title="Fechar"
             >
               <X size={14} />
             </button>
           </div>
         </header>
 
-        {/* Toolbar do Editor */}
         <div className="z-10 bg-zinc-950/80 backdrop-blur-sm border-b border-zinc-800 shrink-0">
           {header}
         </div>
 
-        {/* Área do Texto */}
         <div className="flex-1 overflow-y-auto relative bg-zinc-950">
           {children}
         </div>
       </main>
 
-      {/* --- SIDEBAR DIREITA (WIKI/CONTEXTO) --- */}
+      {/* --- SIDEBAR DIREITA --- */}
       <aside
-        className={`
-          fixed inset-y-0 right-0 z-50 bg-zinc-900 border-l border-zinc-800
-          lg:static lg:bg-zinc-900/30
-          transition-all duration-300 ease-in-out flex flex-col shadow-2xl lg:shadow-none
-          ${
-            showRight
-              ? "w-72 translate-x-0"
-              : "translate-x-full lg:translate-x-0 lg:w-0 lg:border-none lg:opacity-0 overflow-hidden"
-          }
-        `}
+        className={`fixed inset-y-0 right-0 z-50 bg-zinc-900 border-l border-zinc-800 lg:static lg:bg-zinc-900/30 transition-all duration-300 ease-in-out flex flex-col shadow-2xl lg:shadow-none ${
+          showRight
+            ? "w-72 translate-x-0"
+            : "translate-x-full lg:translate-x-0 lg:w-0 lg:border-none lg:opacity-0 overflow-hidden"
+        }`}
       >
         <div className="h-10 flex items-center border-b border-zinc-800 shrink-0 select-none">
-          <button className="flex-1 h-full flex items-center justify-center text-zinc-400 hover:text-orange-500 hover:bg-zinc-800/50 border-b-2 border-transparent hover:border-orange-500 transition-all">
+          <div className="flex-1 h-full flex items-center justify-center text-orange-500 bg-zinc-800/20 border-b-2 border-orange-500 cursor-default">
             <FileText size={16} />
-          </button>
-          <button className="flex-1 h-full flex items-center justify-center text-zinc-600 hover:text-orange-500 hover:bg-zinc-800/50 border-b-2 border-transparent hover:border-orange-500 transition-all">
-            <Users size={16} />
-          </button>
-
+            <span className="ml-2 text-xs font-bold uppercase tracking-wider">
+              Estrutura
+            </span>
+          </div>
           <button
             onClick={() => setShowRight(false)}
             className="px-3 text-zinc-500 hover:text-white h-full border-l border-zinc-800"
@@ -214,9 +184,11 @@ export function DesktopLayout({
             <PanelRight size={14} className="hidden lg:block" />
           </button>
         </div>
-
         <div className="flex-1 overflow-y-auto p-4">{sidebarRight}</div>
       </aside>
+
+      {/* --- 2. COMPONENTE DO MENU DE CONTEXTO --- */}
+      <CustomContextMenu />
     </div>
   );
 }
