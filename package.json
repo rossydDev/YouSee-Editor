@@ -43,5 +43,26 @@
     "tailwindcss": "^4",
     "typescript": "^5.9.3",
     "wait-on": "^9.0.3"
+  },
+
+  "build": {
+    "appId": "com.yousee.editor",
+    "productName": "YouSee Studio",
+    "copyright": "Copyright © 2025 YouSee",
+    "directories": {
+      "output": "dist",
+      "buildResources": "resources"
+    },
+    "win": {
+      "icon": "resources/icon.ico",
+      "target": [
+        "nsis"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "shortcutName": "YouSee Studio"
+    }
   }
 }

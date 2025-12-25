@@ -1,57 +1,50 @@
 # 👁️ YouSee - HQ Script Editor
 
-![Status](https://img.shields.io/badge/Status-MVP%201.0-success)
-![License](https://img.shields.io/badge/License-MIT-blue)
-![Stack](https://img.shields.io/badge/Stack-Next.js%2014%20%7C%20Tiptap-black)
+![YouSee Banner](/public/banner.png)
 
-**O YouSee é um editor de roteiros de histórias em quadrinhos profissional, Open Source, focado em alta performance e uma experiência visual imersiva "Dark Mode".**
+> **O YouSee é um editor de roteiros de histórias em quadrinhos profissional, Open Source, focado em alta performance e uma experiência visual imersiva "Dark Mode".**
 
-Desenvolvido para resolver o problema de formatação de roteiros de HQ, oferecendo uma interface limpa que separa a Página da História da Folha de Impressão.
+Desenvolvido para resolver o problema de formatação de roteiros de HQ, oferecendo uma interface limpa que separa a **Página da História** da **Folha de Impressão**.
 
-![YouSee Editor Screenshot](./public/screenshot.png)
-*(Substitua este caminho pela sua imagem real)*
+![Preview do App](/public/screenshot.png)
 
 ---
 
 ## ✨ Funcionalidades Principais
 
-### 📚 Organização de Séries
-- **Dashboard visual** para gerenciar múltiplos roteiros.
-- **Agrupamento automático** por Série e ordenação por Capítulo.
-- Identidade visual "Dark & Amber" consistente.
-
-### 🧠 Autocomplete Inteligente
-- Sugestão automática de nomes de **Personagens recorrentes** (@ ou digitação).
-- Autocomplete para nomes de **Séries já existentes**.
+### 📚 Organização de Projetos (Novo!)
+- **Gestão de Séries:** Crie séries e organize seus capítulos dentro delas automaticamente.
+- **Hierarquia Visual:** Identifique rapidamente a qual projeto um roteiro pertence direto no Explorador.
+- **Badges de Contagem:** Saiba quantos capítulos cada série possui num piscar de olhos.
 
 ### 📝 Formatação de Roteiro (Comic Script)
-- Blocos semânticos para **Painéis (Cenas), Personagens, Diálogos e SFX**.
-- Numeração inteligente: `PAGE X` - `PANELS: Y`.
+- **Blocos Semânticos:** Atalhos rápidos para Painéis, Personagens, Diálogos e SFX.
+- **Numeração Inteligente:** O sistema gerencia `PAGE X` e `PANEL Y` automaticamente.
+- **Corretor Ortográfico Nativo:** Sublinhado de erros e Menu de Contexto customizado (Dark Mode) com sugestões em Português (PT-BR).
 
 ### 📄 Engine de Paginação Automática
-- Detecta quando o conteúdo excede o tamanho A4 e cria novas páginas automaticamente.
-- **WYSIWYG:** O que você vê na tela é exatamente o que sai no PDF.
+- **Visualização WYSIWYG:** O editor simula folhas A4 reais.
+- **Quebra Automática:** Detecta quando o conteúdo excede o tamanho da página e cria novas folhas automaticamente.
 
-### 💾 Persistência Local-First
-- Salvamento automático e robusto no `localStorage`.
-- **Privacidade total:** seus dados nunca saem do seu navegador.
+### 💾 Persistência & Segurança
+- **Local-First:** Seus arquivos (`.yousee`) são salvos diretamente no seu HD.
+- **Atalhos de Salvamento:** `Ctrl + S` para garantir segurança imediata, além do Autosave.
+- **Lixeira Segura:** Modal de confirmação estilizado para evitar deleções acidentais.
 
-### 🖨️ Exportação PDF Profissional (Engine Própria)
-- **Modo Padrão (Industry Standard):** Fonte Courier Prime 12pt, margens de cinema, fundo branco (pronto para imprimir/enviar para editoras).
-- **Modo YouSee (Dark Mode):** PDF otimizado para leitura digital em tablets/celulares, com fundo escuro e alto contraste.
-- Geração *Client-Side* rápida sem depender de API externa.
+### 🖨️ Exportação PDF Profissional
+- **Modo Padrão (Industry Standard):** Fonte Courier Prime 12pt, fundo branco (pronto para editoras).
+- **Modo YouSee (Dark Mode):** PDF otimizado para leitura digital em tablets/celulares.
 
 ---
 
 ## 🛠️ Stack Tecnológica
 
 - **Core:** Next.js 14 (App Router)
-- **Linguagem:** TypeScript (Strict Mode)
-- **Estilo:** Tailwind CSS (com CSS Variables)
+- **Desktop Engine:** Electron + TypeScript
 - **Editor Engine:** Tiptap (Headless ProseMirror)
+- **Estilo:** Tailwind CSS + Lucide Icons
 - **PDF Engine:** @react-pdf/renderer
-- **State Management:** React Hooks + LocalStorage
-- **Icons:** Lucide React
+- **State:** React Hooks + Local Storage
 
 ---
 
